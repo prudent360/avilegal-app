@@ -46,4 +46,22 @@ class Application extends Model
     {
         return $this->hasMany(Payment::class);
     }
+
+    public function milestones()
+    {
+        return $this->hasMany(Milestone::class)->orderBy('order');
+    }
+
+    public function currentMilestone()
+    {
+        return $this->milestones()->where('status', '!=', 'completed')->first();
+    }
+
+    public function progressPercentage(): int
+    {
+        $total = $this->milestones()->count();
+        if ($total === 0) return 0;
+        $completed = $this->milestones()->where('status', 'completed')->count();
+        return (int) round(($completed / $total) * 100);
+    }
 }

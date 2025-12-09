@@ -12,12 +12,17 @@ class Document extends Model
     protected $fillable = [
         'user_id',
         'application_id',
+        'name',
         'type',
         'file_path',
-        'original_name',
+        'file_name',
+        'file_size',
+        'mime_type',
         'status',
         'rejection_reason',
     ];
+
+    protected $appends = ['url'];
 
     public function user()
     {
@@ -27,5 +32,10 @@ class Document extends Model
     public function application()
     {
         return $this->belongsTo(Application::class);
+    }
+
+    public function getUrlAttribute()
+    {
+        return $this->file_path ? asset('storage/' . $this->file_path) : null;
     }
 }

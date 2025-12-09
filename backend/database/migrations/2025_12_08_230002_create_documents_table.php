@@ -12,9 +12,12 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->foreignId('application_id')->nullable()->constrained()->onDelete('set null');
-            $table->string('type'); // passport, id_card, cac_form, etc.
+            $table->string('name'); // Display name
+            $table->string('type'); // passport, nin, photo, signature
             $table->string('file_path');
-            $table->string('original_name');
+            $table->string('file_name'); // Original filename
+            $table->integer('file_size')->nullable();
+            $table->string('mime_type')->nullable();
             $table->string('status')->default('pending'); // pending, approved, rejected
             $table->text('rejection_reason')->nullable();
             $table->timestamps();

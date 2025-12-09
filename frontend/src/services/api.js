@@ -126,4 +126,18 @@ export const servicesAPI = {
   getOne: (slug) => api.get(`/services/${slug}`),
 }
 
+// Document APIs
+export const documentAPI = {
+  getTypes: () => api.get('/customer/documents/types'),
+  getAll: () => api.get('/customer/documents'),
+  upload: (formData) => api.post('/customer/documents/upload', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }),
+  uploadSignature: (signature, applicationId) => api.post('/customer/documents/signature', { 
+    signature, 
+    application_id: applicationId 
+  }),
+  delete: (id) => api.delete(`/customer/documents/${id}`),
+}
+
 export default api

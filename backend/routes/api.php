@@ -4,6 +4,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Admin\RoleController;
+use App\Http\Controllers\Api\PaymentController;
+use App\Http\Controllers\Api\DocumentController;
 use App\Models\Service;
 
 /*
@@ -47,7 +49,7 @@ Route::middleware('auth:sanctum')->group(function () {
             $user = $request->user();
             return response()->json([
                 'total_applications' => $user->applications()->count(),
-                'pending' => $user->applications()->where('status', 'pending')->count(),
+                'pending' => $user->applications()->whereIn('status', ['pending', 'pending_payment'])->count(),
                 'processing' => $user->applications()->where('status', 'processing')->count(),
                 'completed' => $user->applications()->where('status', 'completed')->count(),
             ]);
@@ -69,52 +71,35 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // Applications
         Route::get('/applications', function (Request $request) {
-            return response()->json($request->user()->applications()->with('service')->latest()->get());
+            return response()->json($request->user()->applications()->with(['service', 'milestones'])->latest()->get());
         });
 
-        Route::post('/applications', function (Request $request) {
-            $request->validate([
-                'service_id' => 'required|exists:services,id',
-                'company_name' => 'required|string|max:255',
-                'business_type' => 'nullable|string|max:100',
-                'details' => 'nullable|array',
-            ]);
-
-            $application = $request->user()->applications()->create([
-                'service_id' => $request->service_id,
-                'company_name' => $request->company_name,
-                'business_type' => $request->business_type,
-                'details' => $request->details,
-                'status' => 'pending',
-                'submitted_at' => now(),
-            ]);
-
-            return response()->json(['message' => 'Application submitted', 'application' => $application->load('service')], 201);
-        });
-
-        Route::get('/applications/{application}', function (Request $request, $id) {
-            $application = $request->user()->applications()->with(['service', 'documents', 'payments'])->find($id);
+        Route::get('/applications/{id}', function (Request $request, $id) {
+            $application = $request->user()->applications()->with(['service', 'documents', 'payments', 'milestones'])->find($id);
             if (!$application) {
                 return response()->json(['message' => 'Application not found'], 404);
             }
             return response()->json($application);
         });
 
-        // Documents
-        Route::get('/documents', function (Request $request) {
-            return response()->json($request->user()->documents()->latest()->get());
-        });
-
         // Payments
-        Route::get('/payments/history', function (Request $request) {
-            return response()->json($request->user()->payments()->with('application')->latest()->get());
-        });
+        Route::get('/payments/config', [PaymentController::class, 'getConfig']);
+        Route::post('/payments/initialize', [PaymentController::class, 'initialize']);
+        Route::post('/payments/verify', [PaymentController::class, 'verify']);
+        Route::get('/payments/history', [PaymentController::class, 'history']);
+
+        // Documents
+        Route::get('/documents/types', [DocumentController::class, 'types']);
+        Route::get('/documents', [DocumentController::class, 'index']);
+        Route::post('/documents/upload', [DocumentController::class, 'upload']);
+        Route::post('/documents/signature', [DocumentController::class, 'uploadSignature']);
+        Route::delete('/documents/{id}', [DocumentController::class, 'destroy']);
     });
 
     // Admin routes - require staff role
     Route::prefix('admin')->middleware('role:super_admin,admin,manager,support')->group(function () {
         // Dashboard - view_reports permission
-        Route::get('/dashboard/stats', function (Request $request) {
+        Route::get('/dashboard/stats', function () {
             return response()->json([
                 'total_users' => \App\Models\User::whereHas('roles', fn($q) => $q->where('name', 'customer'))->count(),
                 'total_applications' => \App\Models\Application::count(),
@@ -123,12 +108,11 @@ Route::middleware('auth:sanctum')->group(function () {
             ]);
         })->middleware('permission:view_reports');
 
-        // Users - require manage_users permission
+        // Users
         Route::middleware('permission:view_users')->group(function () {
             Route::get('/users', function () {
                 return response()->json(\App\Models\User::with('roles')->latest()->get());
             });
-
             Route::get('/users/{user}', function (\App\Models\User $user) {
                 return response()->json($user->load('roles'));
             });
@@ -142,14 +126,13 @@ Route::middleware('auth:sanctum')->group(function () {
             });
         });
 
-        // Applications - require manage_applications permission
+        // Applications
         Route::middleware('permission:view_applications')->group(function () {
             Route::get('/applications', function () {
-                return response()->json(\App\Models\Application::with(['user', 'service'])->latest()->get());
+                return response()->json(\App\Models\Application::with(['user', 'service', 'milestones'])->latest()->get());
             });
-
             Route::get('/applications/{id}', function ($id) {
-                return response()->json(\App\Models\Application::with(['user', 'service', 'documents', 'payments'])->findOrFail($id));
+                return response()->json(\App\Models\Application::with(['user', 'service', 'documents', 'payments', 'milestones'])->findOrFail($id));
             });
         });
 
@@ -157,26 +140,38 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('/applications/{id}/approve', function ($id) {
                 $application = \App\Models\Application::findOrFail($id);
                 $application->update(['status' => 'processing']);
-                return response()->json(['message' => 'Application approved', 'application' => $application]);
+                // Update milestone
+                $milestone = $application->milestones()->where('order', 2)->first();
+                if ($milestone) $milestone->markInProgress();
+                return response()->json(['message' => 'Application approved', 'application' => $application->load('milestones')]);
+            });
+
+            Route::post('/applications/{id}/update-milestone', function (Request $request, $id) {
+                $request->validate(['milestone_id' => 'required|exists:milestones,id']);
+                $application = \App\Models\Application::findOrFail($id);
+                $milestone = $application->milestones()->findOrFail($request->milestone_id);
+                $milestone->markComplete();
+                // Mark next milestone in progress
+                $next = $application->milestones()->where('order', '>', $milestone->order)->first();
+                if ($next) $next->markInProgress();
+                return response()->json(['message' => 'Milestone updated', 'application' => $application->load('milestones')]);
             });
 
             Route::post('/applications/{id}/complete', function ($id) {
                 $application = \App\Models\Application::findOrFail($id);
                 $application->update(['status' => 'completed', 'completed_at' => now()]);
+                $application->milestones()->update(['status' => 'completed', 'completed_at' => now()]);
                 return response()->json(['message' => 'Application completed', 'application' => $application]);
             });
 
             Route::post('/applications/{id}/reject', function (Request $request, $id) {
                 $application = \App\Models\Application::findOrFail($id);
-                $application->update([
-                    'status' => 'rejected',
-                    'admin_notes' => $request->reason,
-                ]);
+                $application->update(['status' => 'rejected', 'admin_notes' => $request->reason]);
                 return response()->json(['message' => 'Application rejected', 'application' => $application]);
             });
         });
 
-        // Documents - require manage_documents permission
+        // Documents
         Route::middleware('permission:view_documents')->group(function () {
             Route::get('/documents', function () {
                 return response()->json(\App\Models\Document::with('user')->latest()->get());
@@ -184,27 +179,18 @@ Route::middleware('auth:sanctum')->group(function () {
         });
 
         Route::middleware('permission:verify_documents')->group(function () {
-            Route::post('/documents/{id}/approve', function ($id) {
-                $document = \App\Models\Document::findOrFail($id);
-                $document->update(['status' => 'approved']);
-                return response()->json(['message' => 'Document approved', 'document' => $document]);
-            });
-
-            Route::post('/documents/{id}/reject', function (Request $request, $id) {
-                $document = \App\Models\Document::findOrFail($id);
-                $document->update(['status' => 'rejected', 'rejection_reason' => $request->reason]);
-                return response()->json(['message' => 'Document rejected', 'document' => $document]);
-            });
+            Route::post('/documents/{id}/approve', [DocumentController::class, 'approve']);
+            Route::post('/documents/{id}/reject', [DocumentController::class, 'reject']);
         });
 
-        // Payments - require view_payments permission
+        // Payments
         Route::middleware('permission:view_payments')->group(function () {
             Route::get('/payments', function () {
                 return response()->json(\App\Models\Payment::with(['user', 'application'])->latest()->get());
             });
         });
 
-        // Roles & Permissions - require manage_roles permission
+        // Roles & Permissions
         Route::middleware('permission:view_roles')->group(function () {
             Route::get('/roles', [RoleController::class, 'index']);
             Route::get('/roles/{role}', [RoleController::class, 'show']);
@@ -221,6 +207,12 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::middleware('permission:assign_roles')->group(function () {
             Route::post('/users/{user}/roles', [RoleController::class, 'syncUserRoles']);
             Route::post('/staff', [RoleController::class, 'createStaff']);
+        });
+
+        // Settings - require manage_settings permission (super_admin only)
+        Route::middleware('permission:manage_settings')->group(function () {
+            Route::get('/settings', [\App\Http\Controllers\Api\SettingsController::class, 'index']);
+            Route::put('/settings', [\App\Http\Controllers\Api\SettingsController::class, 'update']);
         });
     });
 });

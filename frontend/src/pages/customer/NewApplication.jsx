@@ -1,32 +1,42 @@
 import CustomerLayout from '../../components/layouts/CustomerLayout'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ArrowLeft, ArrowRight, Loader } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Loader, CreditCard, Check } from 'lucide-react'
 import { useToast } from '../../context/ToastContext'
-import { applicationAPI, servicesAPI } from '../../services/api'
+import { servicesAPI, paymentAPI } from '../../services/api'
 
 export default function NewApplication() {
   const [step, setStep] = useState(1)
   const [services, setServices] = useState([])
+  const [paymentConfig, setPaymentConfig] = useState(null)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
-  const [formData, setFormData] = useState({ service_id: null, company_name: '', business_type: '' })
+  const [formData, setFormData] = useState({ 
+    service_id: null, 
+    company_name: '', 
+    business_type: '',
+    gateway: 'paystack'
+  })
   const [selectedService, setSelectedService] = useState(null)
   const toast = useToast()
   const navigate = useNavigate()
 
   useEffect(() => {
-    const fetchServices = async () => {
+    const fetchData = async () => {
       try {
-        const res = await servicesAPI.getAll()
-        setServices(res.data)
+        const [servicesRes, configRes] = await Promise.all([
+          servicesAPI.getAll(),
+          paymentAPI.getConfig()
+        ])
+        setServices(servicesRes.data)
+        setPaymentConfig(configRes.data)
       } catch (err) {
         toast.error('Failed to load services')
       } finally {
         setLoading(false)
       }
     }
-    fetchServices()
+    fetchData()
   }, [])
 
   const handleSelectService = (service) => {
@@ -35,22 +45,28 @@ export default function NewApplication() {
     setStep(2)
   }
 
-  const handleSubmit = async () => {
+  const handlePayment = async () => {
     if (!formData.company_name) {
       toast.error('Please enter a business name')
       return
     }
     setSubmitting(true)
     try {
-      await applicationAPI.create({
+      const res = await paymentAPI.initialize({
         service_id: formData.service_id,
+        gateway: formData.gateway,
         company_name: formData.company_name,
         business_type: formData.business_type,
       })
-      toast.success('Application submitted successfully!')
-      navigate('/applications')
+      
+      if (res.data.success && res.data.authorization_url) {
+        // Redirect to payment page
+        window.location.href = res.data.authorization_url
+      } else {
+        toast.error('Failed to initialize payment')
+      }
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to submit application')
+      toast.error(err.response?.data?.message || 'Payment initialization failed')
     } finally {
       setSubmitting(false)
     }
@@ -78,7 +94,7 @@ export default function NewApplication() {
 
       <div className="max-w-2xl">
         <h1 className="text-2xl font-bold text-text mb-2">New Application</h1>
-        <p className="text-text-muted mb-8">Choose a service and provide your business details.</p>
+        <p className="text-text-muted mb-8">Choose a service and complete payment to submit.</p>
 
         {/* Progress */}
         <div className="flex items-center gap-2 mb-8">
@@ -138,20 +154,46 @@ export default function NewApplication() {
 
         {step === 3 && (
           <div>
-            <h2 className="text-lg font-semibold text-text mb-4">Review & Submit</h2>
+            <h2 className="text-lg font-semibold text-text mb-4">Review & Pay</h2>
             <div className="card mb-4">
               <h3 className="font-semibold text-text mb-4">Application Summary</h3>
-              <div className="space-y-3 text-sm">
+              <div className="space-y-3 text-sm border-b border-border pb-4 mb-4">
                 <div className="flex justify-between"><span className="text-text-muted">Service</span><span className="text-text">{selectedService?.name}</span></div>
-                <div className="flex justify-between"><span className="text-text-muted">Price</span><span className="text-text font-semibold">{formatPrice(selectedService?.price)}</span></div>
                 <div className="flex justify-between"><span className="text-text-muted">Business Name</span><span className="text-text">{formData.company_name}</span></div>
                 <div className="flex justify-between"><span className="text-text-muted">Business Type</span><span className="text-text">{formData.business_type || '-'}</span></div>
               </div>
+              <div className="flex justify-between text-lg font-bold">
+                <span className="text-text">Total</span>
+                <span className="text-primary-600">{formatPrice(selectedService?.price)}</span>
+              </div>
             </div>
+
+            <div className="card mb-4">
+              <h3 className="font-semibold text-text mb-4">Select Payment Method</h3>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={() => setFormData({ ...formData, gateway: 'paystack' })}
+                  className={`p-4 border rounded-lg text-center transition ${formData.gateway === 'paystack' ? 'border-primary-500 bg-primary-50' : 'border-border hover:border-primary-300'}`}
+                >
+                  <CreditCard size={24} className="mx-auto mb-2 text-primary-600" />
+                  <span className="font-medium">Paystack</span>
+                  {formData.gateway === 'paystack' && <Check size={16} className="inline ml-2 text-primary-600" />}
+                </button>
+                <button
+                  onClick={() => setFormData({ ...formData, gateway: 'flutterwave' })}
+                  className={`p-4 border rounded-lg text-center transition ${formData.gateway === 'flutterwave' ? 'border-primary-500 bg-primary-50' : 'border-border hover:border-primary-300'}`}
+                >
+                  <CreditCard size={24} className="mx-auto mb-2 text-orange-500" />
+                  <span className="font-medium">Flutterwave</span>
+                  {formData.gateway === 'flutterwave' && <Check size={16} className="inline ml-2 text-primary-600" />}
+                </button>
+              </div>
+            </div>
+
             <div className="flex gap-3">
               <button onClick={() => setStep(2)} className="btn btn-outline">Back</button>
-              <button onClick={handleSubmit} className="btn btn-primary" disabled={submitting}>
-                {submitting ? 'Submitting...' : 'Submit Application'}
+              <button onClick={handlePayment} className="btn btn-primary flex-1" disabled={submitting}>
+                {submitting ? 'Processing...' : `Pay ${formatPrice(selectedService?.price)}`}
               </button>
             </div>
           </div>
