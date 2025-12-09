@@ -22,6 +22,7 @@ export default function AdminLayout({ children }) {
     { to: '/admin/applications', icon: FileText, label: 'Applications' },
     { to: '/admin/payments', icon: CreditCard, label: 'Payments' },
     { to: '/admin/documents', icon: Upload, label: 'Document Review' },
+    { to: '/admin/services', icon: Building2, label: 'Services' },
     { to: '/admin/roles', icon: Shield, label: 'Roles & Access' },
   ]
 

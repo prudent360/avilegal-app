@@ -1,14 +1,14 @@
 import axios from 'axios'
 
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000/api',
   headers: {
     'Content-Type': 'application/json',
-    'Accept': 'application/json',
+    Accept: 'application/json',
   },
 })
 
-// Request interceptor to add auth token
+// Add request interceptor for auth token
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token')
@@ -20,7 +20,7 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 )
 
-// Response interceptor to handle errors
+// Add response interceptor for error handling
 api.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -35,18 +35,15 @@ api.interceptors.response.use(
 
 // Auth APIs
 export const authAPI = {
-  register: (data) => api.post('/register', data),
   login: (data) => api.post('/login', data),
+  register: (data) => api.post('/register', data),
   logout: () => api.post('/logout'),
+  me: () => api.get('/user'),
   getUser: () => api.get('/user'),
   forgotPassword: (email) => api.post('/forgot-password', { email }),
-}
-
-// Profile APIs
-export const profileAPI = {
-  get: () => api.get('/customer/profile'),
-  update: (data) => api.put('/customer/profile', data),
-  updatePassword: (data) => api.put('/customer/profile/password', data),
+  resetPassword: (data) => api.post('/reset-password', data),
+  updateProfile: (data) => api.put('/user/profile', data),
+  updatePassword: (data) => api.put('/user/password', data),
 }
 
 // KYC/Document APIs
@@ -87,6 +84,9 @@ export const adminAPI = {
   deleteUser: (id) => api.delete(`/admin/users/${id}`),
   syncUserRoles: (userId, roles) => api.post(`/admin/users/${userId}/roles`, { roles }),
   
+  // Dashboard
+  getDashboardStats: () => api.get('/admin/dashboard/stats'),
+
   // Applications
   getApplications: (params) => api.get('/admin/applications', { params }),
   getApplication: (id) => api.get(`/admin/applications/${id}`),
@@ -105,6 +105,18 @@ export const adminAPI = {
   getKYCDocuments: (params) => api.get('/admin/kyc', { params }),
   approveKYC: (id) => api.post(`/admin/kyc/${id}/approve`),
   rejectKYC: (id, reason) => api.post(`/admin/kyc/${id}/reject`, { reason }),
+
+  // Documents
+  getDocuments: () => api.get('/admin/documents'),
+  approveDocument: (id) => api.post(`/admin/documents/${id}/approve`),
+  rejectDocument: (id, reason) => api.post(`/admin/documents/${id}/reject`, { reason }),
+
+  // Services
+  getServices: () => api.get('/admin/services'),
+  getService: (id) => api.get(`/admin/services/${id}`),
+  createService: (data) => api.post('/admin/services', data),
+  updateService: (id, data) => api.put(`/admin/services/${id}`, data),
+  deleteService: (id) => api.delete(`/admin/services/${id}`),
   
   // Settings
   getSettings: () => api.get('/admin/settings'),

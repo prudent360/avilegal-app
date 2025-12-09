@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useToast } from '../../context/ToastContext'
-import { Mail, Building2, ArrowRight, ArrowLeft, CheckCircle2 } from 'lucide-react'
+import { authAPI } from '../../services/api'
+import { Mail, Building2, ArrowRight, ArrowLeft, CheckCircle2, Loader } from 'lucide-react'
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('')
@@ -12,11 +13,17 @@ export default function ForgotPassword() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (!email) { toast.error('Please enter your email'); return }
+    
     setLoading(true)
-    await new Promise(r => setTimeout(r, 1500))
-    setSent(true)
-    toast.success('Reset link sent!')
-    setLoading(false)
+    try {
+      await authAPI.forgotPassword(email)
+      setSent(true)
+      toast.success('Reset link sent!')
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to send reset link')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -56,7 +63,9 @@ export default function ForgotPassword() {
                   <input type="email" className="form-input" placeholder="name@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
                 </div>
 
-                <button type="submit" className="btn btn-primary w-full mb-3" disabled={loading}>{loading ? 'Sending...' : 'Send Reset Link'} <ArrowRight size={16} /></button>
+                <button type="submit" className="btn btn-primary w-full mb-3" disabled={loading}>
+                  {loading ? <><Loader size={16} className="animate-spin" /> Sending...</> : <>Send Reset Link <ArrowRight size={16} /></>}
+                </button>
                 <Link to="/login" className="btn btn-outline w-full"><ArrowLeft size={16} /> Back to Login</Link>
               </form>
             </>

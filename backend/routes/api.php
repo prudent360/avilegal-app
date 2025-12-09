@@ -6,6 +6,7 @@ use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\DocumentController;
+use Illuminate\Support\Facades\Hash;
 use App\Models\Service;
 
 /*
@@ -17,7 +18,29 @@ use App\Models\Service;
 // Public routes
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
-Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
+
+// Forgot Password (simple implementation - just returns success for now)
+Route::post('/forgot-password', function (Request $request) {
+    $request->validate(['email' => 'required|email']);
+    
+    $user = \App\Models\User::where('email', $request->email)->first();
+    if ($user) {
+        // Generate a simple token and store it
+        $token = \Illuminate\Support\Str::random(60);
+        \DB::table('password_reset_tokens')->updateOrInsert(
+            ['email' => $request->email],
+            ['token' => Hash::make($token), 'created_at' => now()]
+        );
+        
+        // In production, you would send this via email
+        // For now, we just return success
+    }
+    
+    // Always return success to prevent email enumeration
+    return response()->json([
+        'message' => 'If an account exists with this email, you will receive a password reset link.'
+    ]);
+});
 
 // Get services (public)
 Route::get('/services', function () {
@@ -40,6 +63,38 @@ Route::middleware('auth:sanctum')->group(function () {
         return response()->json([
             'user' => $request->user()->load('roles'),
         ]);
+    });
+
+    // Profile Update
+    Route::put('/user/profile', function (Request $request) {
+        $request->validate([
+            'name' => 'sometimes|string|max:255',
+            'email' => 'sometimes|email|unique:users,email,' . $request->user()->id,
+            'phone' => 'sometimes|nullable|string|max:20',
+        ]);
+        
+        $request->user()->update($request->only(['name', 'email', 'phone']));
+        
+        return response()->json([
+            'message' => 'Profile updated successfully',
+            'user' => $request->user()->fresh()->load('roles'),
+        ]);
+    });
+
+    // Password Update
+    Route::put('/user/password', function (Request $request) {
+        $request->validate([
+            'current_password' => 'required',
+            'new_password' => 'required|min:8|confirmed',
+        ]);
+        
+        if (!Hash::check($request->current_password, $request->user()->password)) {
+            return response()->json(['message' => 'Current password is incorrect'], 422);
+        }
+        
+        $request->user()->update(['password' => Hash::make($request->new_password)]);
+        
+        return response()->json(['message' => 'Password updated successfully']);
     });
 
     // Customer routes
@@ -284,6 +339,48 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::middleware('permission:assign_roles')->group(function () {
             Route::post('/users/{user}/roles', [RoleController::class, 'syncUserRoles']);
             Route::post('/staff', [RoleController::class, 'createStaff']);
+        });
+
+        // Services Management
+        Route::middleware('permission:manage_settings')->group(function () {
+            Route::get('/services', function () {
+                return response()->json(Service::all());
+            });
+            Route::get('/services/{id}', function ($id) {
+                return response()->json(Service::findOrFail($id));
+            });
+            Route::post('/services', function (Request $request) {
+                $request->validate([
+                    'name' => 'required|string|max:255',
+                    'price' => 'required|numeric|min:0',
+                    'slug' => 'sometimes|string|max:100',
+                    'description' => 'nullable|string',
+                    'processing_time' => 'nullable|string',
+                    'is_active' => 'boolean',
+                ]);
+                $data = $request->all();
+                if (!isset($data['slug']) || !$data['slug']) {
+                    $data['slug'] = \Illuminate\Support\Str::slug($request->name);
+                }
+                return response()->json(Service::create($data), 201);
+            });
+            Route::put('/services/{id}', function (Request $request, $id) {
+                $service = Service::findOrFail($id);
+                $request->validate([
+                    'name' => 'sometimes|string|max:255',
+                    'price' => 'sometimes|numeric|min:0',
+                    'slug' => 'sometimes|string|max:100',
+                    'description' => 'nullable|string',
+                    'processing_time' => 'nullable|string',
+                    'is_active' => 'boolean',
+                ]);
+                $service->update($request->all());
+                return response()->json($service);
+            });
+            Route::delete('/services/{id}', function ($id) {
+                Service::findOrFail($id)->delete();
+                return response()->json(['message' => 'Service deleted']);
+            });
         });
 
         // Settings - require manage_settings permission (super_admin only)

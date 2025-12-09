@@ -24,6 +24,10 @@ class Document extends Model
         'uploaded_by_admin',
     ];
 
+    protected $casts = [
+        'uploaded_by_admin' => 'boolean',
+    ];
+
     protected $appends = ['url'];
 
     public function user()

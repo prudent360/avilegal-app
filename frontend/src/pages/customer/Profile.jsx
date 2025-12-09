@@ -2,16 +2,68 @@ import CustomerLayout from '../../components/layouts/CustomerLayout'
 import { useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../context/ToastContext'
-import { User, Mail, Phone, Lock } from 'lucide-react'
+import { authAPI } from '../../services/api'
+import { User, Lock, Loader, Eye, EyeOff } from 'lucide-react'
 
 export default function Profile() {
-  const { user, updateUser } = useAuth()
+  const { user, setUser } = useAuth()
   const toast = useToast()
-  const [formData, setFormData] = useState({ name: user?.name || '', email: user?.email || '', phone: user?.phone || '' })
+  const [saving, setSaving] = useState(false)
+  const [changingPassword, setChangingPassword] = useState(false)
+  const [showPasswords, setShowPasswords] = useState({})
+  
+  const [formData, setFormData] = useState({ 
+    name: user?.name || '', 
+    email: user?.email || '', 
+    phone: user?.phone || '' 
+  })
+  
+  const [passwordData, setPasswordData] = useState({
+    current_password: '',
+    new_password: '',
+    new_password_confirmation: '',
+  })
 
-  const handleSubmit = (e) => {
+  const handleProfileSubmit = async (e) => {
     e.preventDefault()
-    toast.success('Profile updated successfully!')
+    setSaving(true)
+    try {
+      const res = await authAPI.updateProfile(formData)
+      setUser(res.data.user || { ...user, ...formData })
+      localStorage.setItem('user', JSON.stringify(res.data.user || { ...user, ...formData }))
+      toast.success('Profile updated successfully!')
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to update profile')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handlePasswordSubmit = async (e) => {
+    e.preventDefault()
+    if (passwordData.new_password !== passwordData.new_password_confirmation) {
+      toast.error('New passwords do not match')
+      return
+    }
+    if (passwordData.new_password.length < 8) {
+      toast.error('Password must be at least 8 characters')
+      return
+    }
+    
+    setChangingPassword(true)
+    try {
+      await authAPI.updatePassword(passwordData)
+      toast.success('Password updated successfully!')
+      setPasswordData({ current_password: '', new_password: '', new_password_confirmation: '' })
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to update password')
+    } finally {
+      setChangingPassword(false)
+    }
+  }
+
+  const toggleShowPassword = (field) => {
+    setShowPasswords(prev => ({ ...prev, [field]: !prev[field] }))
   }
 
   return (
@@ -21,42 +73,102 @@ export default function Profile() {
         <p className="text-text-muted">Manage your account information.</p>
       </div>
 
-      <div className="max-w-xl">
-        <div className="card mb-6">
-          <h2 className="text-lg font-semibold text-text mb-4">Personal Information</h2>
-          <form onSubmit={handleSubmit}>
+      <div className="max-w-xl space-y-6">
+        {/* Personal Information */}
+        <div className="card">
+          <div className="flex items-center gap-3 mb-4">
+            <User size={20} className="text-primary-600" />
+            <h2 className="text-lg font-semibold text-text">Personal Information</h2>
+          </div>
+          <form onSubmit={handleProfileSubmit}>
             <div className="form-group">
               <label className="form-label">Full Name</label>
-              <input type="text" className="form-input" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
+              <input 
+                type="text" 
+                className="form-input" 
+                value={formData.name} 
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })} 
+              />
             </div>
             <div className="form-group">
               <label className="form-label">Email Address</label>
-              <input type="email" className="form-input" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
+              <input 
+                type="email" 
+                className="form-input" 
+                value={formData.email} 
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })} 
+              />
             </div>
             <div className="form-group">
               <label className="form-label">Phone Number</label>
-              <input type="tel" className="form-input" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} />
+              <input 
+                type="tel" 
+                className="form-input" 
+                value={formData.phone} 
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })} 
+              />
             </div>
-            <button type="submit" className="btn btn-primary">Save Changes</button>
+            <button type="submit" className="btn btn-primary" disabled={saving}>
+              {saving ? <><Loader size={16} className="animate-spin" /> Saving...</> : 'Save Changes'}
+            </button>
           </form>
         </div>
 
+        {/* Change Password */}
         <div className="card">
-          <h2 className="text-lg font-semibold text-text mb-4">Change Password</h2>
-          <form>
+          <div className="flex items-center gap-3 mb-4">
+            <Lock size={20} className="text-primary-600" />
+            <h2 className="text-lg font-semibold text-text">Change Password</h2>
+          </div>
+          <form onSubmit={handlePasswordSubmit}>
             <div className="form-group">
               <label className="form-label">Current Password</label>
-              <input type="password" className="form-input" placeholder="••••••••" />
+              <div className="relative">
+                <input 
+                  type={showPasswords.current ? 'text' : 'password'} 
+                  className="form-input pr-10" 
+                  placeholder="••••••••" 
+                  value={passwordData.current_password}
+                  onChange={(e) => setPasswordData({ ...passwordData, current_password: e.target.value })}
+                />
+                <button type="button" onClick={() => toggleShowPassword('current')} className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text">
+                  {showPasswords.current ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
             </div>
             <div className="form-group">
               <label className="form-label">New Password</label>
-              <input type="password" className="form-input" placeholder="••••••••" />
+              <div className="relative">
+                <input 
+                  type={showPasswords.new ? 'text' : 'password'} 
+                  className="form-input pr-10" 
+                  placeholder="••••••••" 
+                  value={passwordData.new_password}
+                  onChange={(e) => setPasswordData({ ...passwordData, new_password: e.target.value })}
+                />
+                <button type="button" onClick={() => toggleShowPassword('new')} className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text">
+                  {showPasswords.new ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
             </div>
             <div className="form-group">
               <label className="form-label">Confirm New Password</label>
-              <input type="password" className="form-input" placeholder="••••••••" />
+              <div className="relative">
+                <input 
+                  type={showPasswords.confirm ? 'text' : 'password'} 
+                  className="form-input pr-10" 
+                  placeholder="••••••••" 
+                  value={passwordData.new_password_confirmation}
+                  onChange={(e) => setPasswordData({ ...passwordData, new_password_confirmation: e.target.value })}
+                />
+                <button type="button" onClick={() => toggleShowPassword('confirm')} className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text">
+                  {showPasswords.confirm ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
             </div>
-            <button type="submit" className="btn btn-outline">Update Password</button>
+            <button type="submit" className="btn btn-outline" disabled={changingPassword}>
+              {changingPassword ? <><Loader size={16} className="animate-spin" /> Updating...</> : 'Update Password'}
+            </button>
           </form>
         </div>
       </div>

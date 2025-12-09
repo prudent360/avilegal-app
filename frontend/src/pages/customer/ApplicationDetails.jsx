@@ -204,19 +204,14 @@ export default function ApplicationDetails() {
             </div>
           )}
 
-          {/* Actions */}
+          {/* Your Documents */}
           <div className="card">
-            <h2 className="text-lg font-semibold text-text mb-4">Actions</h2>
-            <div className="space-y-2">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-text">Your Documents</h2>
               {application.status === 'pending_payment' && (
-                <Link to={`/applications/${application.id}/edit`} className="btn btn-outline w-full">Edit Application</Link>
+                <Link to={`/applications/${application.id}/edit`} className="btn btn-outline btn-sm">Edit Application</Link>
               )}
             </div>
-          </div>
-
-          {/* Downloadable Documents from Admin */}
-          <div className="card">
-            <h2 className="text-lg font-semibold text-text mb-4">Your Documents</h2>
             {application.documents && application.documents.filter(d => d.uploaded_by_admin).length > 0 ? (
               <div className="space-y-2">
                 {application.documents.filter(d => d.uploaded_by_admin).map((doc) => (
@@ -239,9 +234,9 @@ export default function ApplicationDetails() {
               <div className="text-center py-4">
                 <Download size={24} className="mx-auto text-text-muted mb-2" />
                 <p className="text-sm text-text-muted">
-                  {application.status === 'completed' 
-                    ? 'Documents will appear here once uploaded by admin.'
-                    : 'Your certificates and documents will appear here once your application is processed.'}
+                  {['processing', 'completed'].includes(application.status)
+                    ? 'Your certificates and documents will appear here once uploaded by admin.'
+                    : 'Documents will be available after your application is approved.'}
                 </p>
               </div>
             )}
