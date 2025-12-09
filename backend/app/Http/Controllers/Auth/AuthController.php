@@ -34,6 +34,15 @@ class AuthController extends Controller
             $user->assignRole($customerRole);
         }
 
+        // Send welcome email
+        try {
+            \Illuminate\Support\Facades\Mail::to($user->email)
+                ->send(new \App\Mail\WelcomeEmail($user));
+        } catch (\Exception $e) {
+            // Log but don't fail registration
+            \Illuminate\Support\Facades\Log::warning('Welcome email failed: ' . $e->getMessage());
+        }
+
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([

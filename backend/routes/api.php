@@ -229,6 +229,13 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/settings', [\App\Http\Controllers\Api\SettingsController::class, 'index']);
             Route::put('/settings', [\App\Http\Controllers\Api\SettingsController::class, 'update']);
             Route::post('/settings/test-email', [\App\Http\Controllers\Api\SettingsController::class, 'testEmail']);
+
+            // Email Templates
+            Route::get('/email-templates', [\App\Http\Controllers\Api\EmailTemplateController::class, 'index']);
+            Route::get('/email-templates/{id}', [\App\Http\Controllers\Api\EmailTemplateController::class, 'show']);
+            Route::put('/email-templates/{id}', [\App\Http\Controllers\Api\EmailTemplateController::class, 'update']);
+            Route::post('/email-templates/{id}/reset', [\App\Http\Controllers\Api\EmailTemplateController::class, 'reset']);
+            Route::post('/email-templates/{id}/test', [\App\Http\Controllers\Api\EmailTemplateController::class, 'test']);
         });
     });
 });

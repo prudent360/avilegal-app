@@ -1,12 +1,14 @@
-import { NavLink, useNavigate } from 'react-router-dom'
+import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
-import { Building2, LayoutDashboard, Users, FileText, Upload, Settings, LogOut, Menu, X, Shield, CreditCard } from 'lucide-react'
+import { Building2, LayoutDashboard, Users, FileText, Upload, Settings, LogOut, Menu, X, Shield, CreditCard, ChevronDown, Mail } from 'lucide-react'
 import { useState } from 'react'
 
 export default function AdminLayout({ children }) {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(location.pathname.includes('/admin/settings') || location.pathname.includes('/admin/email-templates'))
 
   const handleLogout = async () => { await logout(); navigate('/login') }
 
@@ -17,8 +19,14 @@ export default function AdminLayout({ children }) {
     { to: '/admin/payments', icon: CreditCard, label: 'Payments' },
     { to: '/admin/documents', icon: Upload, label: 'Document Review' },
     { to: '/admin/roles', icon: Shield, label: 'Roles & Access' },
-    { to: '/admin/settings', icon: Settings, label: 'Settings' },
   ]
+
+  const settingsSubLinks = [
+    { to: '/admin/settings', label: 'General Settings' },
+    { to: '/admin/email-templates', label: 'Email Templates' },
+  ]
+
+  const isSettingsActive = location.pathname.includes('/admin/settings') || location.pathname.includes('/admin/email-templates')
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -44,7 +52,7 @@ export default function AdminLayout({ children }) {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-3 py-4 space-y-1">
+        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
           {navLinks.map(({ to, icon: Icon, label }) => (
             <NavLink key={to} to={to} end={to === '/admin'} onClick={() => setSidebarOpen(false)}
               className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
@@ -52,6 +60,36 @@ export default function AdminLayout({ children }) {
               <span>{label}</span>
             </NavLink>
           ))}
+
+          {/* Settings with submenu */}
+          <div>
+            <button
+              onClick={() => setSettingsOpen(!settingsOpen)}
+              className={`nav-link w-full justify-between ${isSettingsActive ? 'active' : ''}`}
+            >
+              <span className="flex items-center gap-3">
+                <Settings size={18} />
+                <span>Settings</span>
+              </span>
+              <ChevronDown size={16} className={`transition-transform ${settingsOpen ? 'rotate-180' : ''}`} />
+            </button>
+            {settingsOpen && (
+              <div className="ml-6 mt-1 space-y-1 border-l border-border pl-3">
+                {settingsSubLinks.map(({ to, label }) => (
+                  <NavLink
+                    key={to}
+                    to={to}
+                    onClick={() => setSidebarOpen(false)}
+                    className={({ isActive }) => `nav-link text-sm py-2 ${isActive ? 'active' : ''}`}
+                  >
+                    {label === 'Email Templates' && <Mail size={14} />}
+                    {label === 'General Settings' && <Settings size={14} />}
+                    <span>{label}</span>
+                  </NavLink>
+                ))}
+              </div>
+            )}
+          </div>
         </nav>
 
         {/* User & Logout */}

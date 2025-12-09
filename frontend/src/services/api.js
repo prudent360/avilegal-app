@@ -101,6 +101,13 @@ export const adminAPI = {
   updateSettings: (data) => api.put('/admin/settings', data),
   testEmail: (email) => api.post('/admin/settings/test-email', { email }),
 
+  // Email Templates
+  getEmailTemplates: () => api.get('/admin/email-templates'),
+  getEmailTemplate: (id) => api.get(`/admin/email-templates/${id}`),
+  updateEmailTemplate: (id, data) => api.put(`/admin/email-templates/${id}`, data),
+  resetEmailTemplate: (id) => api.post(`/admin/email-templates/${id}/reset`),
+  testEmailTemplate: (id, email) => api.post(`/admin/email-templates/${id}/test`, { email }),
+
   // Roles & Permissions
   getRoles: () => api.get('/admin/roles'),
   getRole: (id) => api.get(`/admin/roles/${id}`),

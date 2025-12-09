@@ -215,6 +215,9 @@ class PaymentController extends Controller
             // Create default milestones
             $this->createDefaultMilestones($payment->application);
 
+            // Send payment confirmation email
+            $this->sendPaymentConfirmationEmail($payment);
+
             return response()->json([
                 'success' => true,
                 'message' => 'Payment verified successfully',
@@ -254,6 +257,9 @@ class PaymentController extends Controller
             // Create default milestones
             $this->createDefaultMilestones($payment->application);
 
+            // Send payment confirmation email
+            $this->sendPaymentConfirmationEmail($payment);
+
             return response()->json([
                 'success' => true,
                 'message' => 'Payment verified successfully',
@@ -283,6 +289,20 @@ class PaymentController extends Controller
 
         foreach ($milestones as $milestone) {
             $application->milestones()->create($milestone);
+        }
+    }
+
+    /**
+     * Send payment confirmation email
+     */
+    private function sendPaymentConfirmationEmail($payment)
+    {
+        try {
+            $payment->load(['user', 'application.service']);
+            \Illuminate\Support\Facades\Mail::to($payment->user->email)
+                ->send(new \App\Mail\PaymentConfirmation($payment));
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::warning('Payment email failed: ' . $e->getMessage());
         }
     }
 

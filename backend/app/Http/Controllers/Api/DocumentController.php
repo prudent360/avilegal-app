@@ -133,6 +133,15 @@ class DocumentController extends Controller
         $document = Document::findOrFail($id);
         $document->update(['status' => 'approved']);
 
+        // Send email notification
+        try {
+            $document->load('user');
+            \Illuminate\Support\Facades\Mail::to($document->user->email)
+                ->send(new \App\Mail\DocumentReview($document, 'approved'));
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::warning('Document approval email failed: ' . $e->getMessage());
+        }
+
         return response()->json([
             'message' => 'Document approved',
             'document' => $document,
@@ -151,6 +160,15 @@ class DocumentController extends Controller
             'status' => 'rejected',
             'rejection_reason' => $request->reason,
         ]);
+
+        // Send email notification
+        try {
+            $document->load('user');
+            \Illuminate\Support\Facades\Mail::to($document->user->email)
+                ->send(new \App\Mail\DocumentReview($document, 'rejected'));
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::warning('Document rejection email failed: ' . $e->getMessage());
+        }
 
         return response()->json([
             'message' => 'Document rejected',
