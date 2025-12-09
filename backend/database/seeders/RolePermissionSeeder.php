@@ -16,6 +16,7 @@ class RolePermissionSeeder extends Seeder
             ['name' => 'view_users', 'display_name' => 'View Users', 'group' => 'users'],
             ['name' => 'manage_users', 'display_name' => 'Manage Users', 'group' => 'users'],
             ['name' => 'suspend_users', 'display_name' => 'Suspend Users', 'group' => 'users'],
+            ['name' => 'delete_users', 'display_name' => 'Delete Users', 'group' => 'users'],
 
             // Application management
             ['name' => 'view_applications', 'display_name' => 'View Applications', 'group' => 'applications'],

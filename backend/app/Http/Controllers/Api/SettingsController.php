@@ -73,4 +73,64 @@ class SettingsController extends Controller
             'value' => Setting::get($key),
         ]);
     }
+
+    /**
+     * Send test email to verify SMTP settings
+     */
+    public function testEmail(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email',
+        ]);
+
+        try {
+            // Configure mail on the fly from settings
+            $host = Setting::get('smtp_host');
+            $port = Setting::get('smtp_port', 587);
+            $username = Setting::get('smtp_username');
+            $password = Setting::get('smtp_password');
+            $encryption = Setting::get('smtp_encryption', 'tls');
+            $fromAddress = Setting::get('smtp_from_address');
+            $fromName = Setting::get('smtp_from_name', 'AviLegal');
+
+            if (!$host || !$username || !$password) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'SMTP settings are incomplete. Please configure host, username, and password.',
+                ], 400);
+            }
+
+            // Set config dynamically
+            config([
+                'mail.default' => 'smtp',
+                'mail.mailers.smtp.host' => $host,
+                'mail.mailers.smtp.port' => $port,
+                'mail.mailers.smtp.username' => $username,
+                'mail.mailers.smtp.password' => $password,
+                'mail.mailers.smtp.encryption' => $encryption ?: null,
+                'mail.from.address' => $fromAddress ?: $username,
+                'mail.from.name' => $fromName,
+            ]);
+
+            // Send test email
+            \Illuminate\Support\Facades\Mail::raw(
+                "This is a test email from AviLegal.\n\nIf you received this, your SMTP settings are working correctly.\n\nTime: " . now()->toDateTimeString(),
+                function ($message) use ($request, $fromName) {
+                    $message->to($request->email)
+                        ->subject('AviLegal - Test Email');
+                }
+            );
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Test email sent successfully to ' . $request->email,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to send test email: ' . $e->getMessage(),
+            ], 400);
+        }
+    }
 }
+

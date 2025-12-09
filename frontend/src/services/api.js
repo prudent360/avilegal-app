@@ -82,6 +82,7 @@ export const adminAPI = {
   getUsers: (params) => api.get('/admin/users', { params }),
   getUser: (id) => api.get(`/admin/users/${id}`),
   updateUserStatus: (id, status) => api.patch(`/admin/users/${id}/status`, { status }),
+  deleteUser: (id) => api.delete(`/admin/users/${id}`),
   syncUserRoles: (userId, roles) => api.post(`/admin/users/${userId}/roles`, { roles }),
   
   // Applications
@@ -98,6 +99,7 @@ export const adminAPI = {
   // Settings
   getSettings: () => api.get('/admin/settings'),
   updateSettings: (data) => api.put('/admin/settings', data),
+  testEmail: (email) => api.post('/admin/settings/test-email', { email }),
 
   // Roles & Permissions
   getRoles: () => api.get('/admin/roles'),

@@ -126,6 +126,21 @@ Route::middleware('auth:sanctum')->group(function () {
             });
         });
 
+        Route::middleware('permission:delete_users')->group(function () {
+            Route::delete('/users/{user}', function (\App\Models\User $user) {
+                // Prevent deleting super admins
+                if ($user->hasRole('super_admin')) {
+                    return response()->json(['message' => 'Cannot delete super admin'], 403);
+                }
+                // Delete user's data
+                $user->applications()->delete();
+                $user->documents()->delete();
+                $user->payments()->delete();
+                $user->delete();
+                return response()->json(['message' => 'User deleted successfully']);
+            });
+        });
+
         // Applications
         Route::middleware('permission:view_applications')->group(function () {
             Route::get('/applications', function () {
@@ -213,6 +228,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::middleware('permission:manage_settings')->group(function () {
             Route::get('/settings', [\App\Http\Controllers\Api\SettingsController::class, 'index']);
             Route::put('/settings', [\App\Http\Controllers\Api\SettingsController::class, 'update']);
+            Route::post('/settings/test-email', [\App\Http\Controllers\Api\SettingsController::class, 'testEmail']);
         });
     });
 });
