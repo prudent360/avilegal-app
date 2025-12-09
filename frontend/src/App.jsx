@@ -28,9 +28,8 @@ import AdminDocuments from './pages/admin/DocumentReview'
 import AdminSettings from './pages/admin/Settings'
 import AdminRoles from './pages/admin/Roles'
 import AdminPayments from './pages/admin/Payments'
-import AdminEmailTemplates from './pages/admin/EmailTemplates'
 import AdminPaymentConfig from './pages/admin/PaymentConfig'
-import AdminSmtpConfig from './pages/admin/SmtpConfig'
+import AdminEmailConfig from './pages/admin/EmailConfig'
 
 // Protected Route Component
 function ProtectedRoute({ children, adminOnly = false }) {
@@ -109,9 +108,8 @@ function AppRoutes() {
       <Route path="/admin/payments" element={<ProtectedRoute adminOnly><AdminPayments /></ProtectedRoute>} />
       <Route path="/admin/settings" element={<ProtectedRoute adminOnly><AdminSettings /></ProtectedRoute>} />
       <Route path="/admin/roles" element={<ProtectedRoute adminOnly><AdminRoles /></ProtectedRoute>} />
-      <Route path="/admin/email-templates" element={<ProtectedRoute adminOnly><AdminEmailTemplates /></ProtectedRoute>} />
       <Route path="/admin/payment-config" element={<ProtectedRoute adminOnly><AdminPaymentConfig /></ProtectedRoute>} />
-      <Route path="/admin/smtp-config" element={<ProtectedRoute adminOnly><AdminSmtpConfig /></ProtectedRoute>} />
+      <Route path="/admin/email-config" element={<ProtectedRoute adminOnly><AdminEmailConfig /></ProtectedRoute>} />
       
       {/* Fallback */}
       <Route path="*" element={<Navigate to="/" replace />} />

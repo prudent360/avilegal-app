@@ -426,7 +426,7 @@ export default function AdminApplicationDetails() {
                       </span>
                       {doc.url && (
                         <a 
-                          href={`http://localhost:8000${doc.url}`} 
+                          href={doc.url} 
                           target="_blank" 
                           rel="noopener noreferrer"
                           className="btn btn-sm btn-outline"
@@ -448,33 +448,33 @@ export default function AdminApplicationDetails() {
               <div className="mt-4 pt-4 border-t border-border">
                 <h3 className="font-medium text-text mb-3">Applicant Documents (from application)</h3>
                 <div className="grid sm:grid-cols-3 gap-3">
-                  {applicant.nin_doc && (
-                    <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                      <p className="text-sm font-medium text-green-700">NIN Document</p>
-                      <p className="text-xs text-green-600">✓ Uploaded</p>
-                      {applicant.nin_doc.url && (
-                        <a href={`http://localhost:8000${applicant.nin_doc.url}`} target="_blank" rel="noopener noreferrer" className="text-xs text-green-700 underline">View</a>
-                      )}
-                    </div>
-                  )}
-                  {applicant.signature_doc && (
-                    <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                      <p className="text-sm font-medium text-green-700">Signature</p>
-                      <p className="text-xs text-green-600">✓ Uploaded</p>
-                      {applicant.signature_doc.url && (
-                        <a href={`http://localhost:8000${applicant.signature_doc.url}`} target="_blank" rel="noopener noreferrer" className="text-xs text-green-700 underline">View</a>
-                      )}
-                    </div>
-                  )}
-                  {applicant.photo_doc && (
-                    <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                      <p className="text-sm font-medium text-green-700">Passport Photo</p>
-                      <p className="text-xs text-green-600">✓ Uploaded</p>
-                      {applicant.photo_doc.url && (
-                        <a href={`http://localhost:8000${applicant.photo_doc.url}`} target="_blank" rel="noopener noreferrer" className="text-xs text-green-700 underline">View</a>
-                      )}
-                    </div>
-                  )}
+                    {applicant.nin_doc && (
+                      <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <p className="text-sm font-medium text-green-700">NIN Document</p>
+                        <p className="text-xs text-green-600">✓ Uploaded</p>
+                        {applicant.nin_doc.url && (
+                          <a href={applicant.nin_doc.url} target="_blank" rel="noopener noreferrer" className="text-xs text-green-700 underline">View</a>
+                        )}
+                      </div>
+                    )}
+                    {applicant.signature_doc && (
+                      <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <p className="text-sm font-medium text-green-700">Signature</p>
+                        <p className="text-xs text-green-600">✓ Uploaded</p>
+                        {applicant.signature_doc.url && (
+                          <a href={applicant.signature_doc.url} target="_blank" rel="noopener noreferrer" className="text-xs text-green-700 underline">View</a>
+                        )}
+                      </div>
+                    )}
+                    {applicant.photo_doc && (
+                      <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <p className="text-sm font-medium text-green-700">Passport Photo</p>
+                        <p className="text-xs text-green-600">✓ Uploaded</p>
+                        {applicant.photo_doc.url && (
+                          <a href={applicant.photo_doc.url} target="_blank" rel="noopener noreferrer" className="text-xs text-green-700 underline">View</a>
+                        )}
+                      </div>
+                    )}
                 </div>
               </div>
             )}

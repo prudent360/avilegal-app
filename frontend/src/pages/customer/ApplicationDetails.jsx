@@ -222,7 +222,7 @@ export default function ApplicationDetails() {
                 {application.documents.filter(d => d.uploaded_by_admin).map((doc) => (
                   <a 
                     key={doc.id}
-                    href={`http://localhost:8000${doc.url}`}
+                    href={doc.url}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100 transition"

@@ -10,9 +10,8 @@ export default function AdminLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(
     location.pathname.includes('/admin/settings') || 
-    location.pathname.includes('/admin/email-templates') ||
     location.pathname.includes('/admin/payment-config') ||
-    location.pathname.includes('/admin/smtp-config')
+    location.pathname.includes('/admin/email-config')
   )
 
   const handleLogout = async () => { await logout(); navigate('/login') }
@@ -29,14 +28,12 @@ export default function AdminLayout({ children }) {
   const settingsSubLinks = [
     { to: '/admin/settings', label: 'General Settings' },
     { to: '/admin/payment-config', label: 'Payment Gateway' },
-    { to: '/admin/smtp-config', label: 'SMTP / Email' },
-    { to: '/admin/email-templates', label: 'Email Templates' },
+    { to: '/admin/email-config', label: 'Email & Templates' },
   ]
 
   const isSettingsActive = location.pathname.includes('/admin/settings') || 
-    location.pathname.includes('/admin/email-templates') || 
     location.pathname.includes('/admin/payment-config') || 
-    location.pathname.includes('/admin/smtp-config')
+    location.pathname.includes('/admin/email-config')
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -92,8 +89,9 @@ export default function AdminLayout({ children }) {
                     onClick={() => setSidebarOpen(false)}
                     className={({ isActive }) => `nav-link text-sm py-2 ${isActive ? 'active' : ''}`}
                   >
-                    {label === 'Email Templates' && <Mail size={14} />}
                     {label === 'General Settings' && <Settings size={14} />}
+                    {label === 'Payment Gateway' && <CreditCard size={14} />}
+                    {label === 'Email & Templates' && <Mail size={14} />}
                     <span>{label}</span>
                   </NavLink>
                 ))}
