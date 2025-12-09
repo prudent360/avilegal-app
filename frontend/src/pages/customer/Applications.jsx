@@ -1,32 +1,46 @@
 import CustomerLayout from '../../components/layouts/CustomerLayout'
 import { Link } from 'react-router-dom'
-import { Plus, FileText, Clock, CheckCircle, XCircle, ArrowRight, Loader } from 'lucide-react'
+import { Plus, FileText, Clock, CheckCircle, XCircle, ArrowRight, Loader, Trash2, CreditCard, AlertCircle, Pencil } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { applicationAPI } from '../../services/api'
+import { useToast } from '../../context/ToastContext'
 
 export default function Applications() {
   const [applications, setApplications] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const toast = useToast()
 
   useEffect(() => {
-    const fetchApplications = async () => {
-      try {
-        const res = await applicationAPI.getAll()
-        setApplications(res.data)
-      } catch (err) {
-        setError('Failed to load applications')
-        console.error(err)
-      } finally {
-        setLoading(false)
-      }
-    }
     fetchApplications()
   }, [])
 
+  const fetchApplications = async () => {
+    try {
+      const res = await applicationAPI.getAll()
+      setApplications(res.data)
+    } catch (err) {
+      setError('Failed to load applications')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleDelete = async (id, companyName) => {
+    if (!confirm(`Delete application for "${companyName}"? This cannot be undone.`)) return
+    try {
+      await applicationAPI.delete(id)
+      toast.success('Application deleted')
+      setApplications(apps => apps.filter(a => a.id !== id))
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to delete')
+    }
+  }
+
   const getStatusBadge = (status) => {
     const badges = {
-      pending: 'badge badge-warning',
+      pending_payment: 'badge badge-warning',
+      pending: 'badge badge-info',
       processing: 'badge badge-info',
       completed: 'badge badge-success',
       rejected: 'badge badge-danger',
@@ -34,8 +48,20 @@ export default function Applications() {
     return badges[status] || 'badge'
   }
 
+  const getStatusLabel = (status) => {
+    const labels = {
+      pending_payment: 'Awaiting Payment',
+      pending: 'Pending Review',
+      processing: 'Processing',
+      completed: 'Completed',
+      rejected: 'Rejected',
+    }
+    return labels[status] || status
+  }
+
   const getStatusIcon = (status) => {
     const icons = {
+      pending_payment: <CreditCard size={16} />,
       pending: <Clock size={16} />,
       processing: <Loader size={16} className="animate-spin" />,
       completed: <CheckCircle size={16} />,
@@ -80,24 +106,54 @@ export default function Applications() {
       ) : (
         <div className="space-y-4">
           {applications.map((app) => (
-            <div key={app.id} className="card flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center text-primary-600">
-                  {getStatusIcon(app.status)}
+            <div key={app.id} className="card">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
+                    app.status === 'pending_payment' ? 'bg-yellow-100 text-yellow-600' : 'bg-primary-100 text-primary-600'
+                  }`}>
+                    {getStatusIcon(app.status)}
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-text">{app.company_name}</h3>
+                    <p className="text-sm text-text-muted">{app.service?.name || 'Business Registration'}</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-semibold text-text">{app.company_name}</h3>
-                  <p className="text-sm text-text-muted">{app.service?.name || 'Business Registration'}</p>
+                <div className="flex items-center gap-3">
+                  <span className={getStatusBadge(app.status)}>
+                    {getStatusLabel(app.status)}
+                  </span>
+                  
+                  {app.status === 'pending_payment' ? (
+                    <>
+                      <Link to={`/applications/${app.id}/edit`} className="btn btn-outline btn-sm" title="Edit">
+                        <Pencil size={16} />
+                      </Link>
+                      <Link to={`/applications/${app.id}`} className="btn btn-primary btn-sm">
+                        Continue <ArrowRight size={16} />
+                      </Link>
+                      <button 
+                        onClick={() => handleDelete(app.id, app.company_name)}
+                        className="btn btn-outline btn-sm text-red-600 hover:bg-red-50 hover:border-red-300"
+                        title="Delete"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </>
+                  ) : (
+                    <Link to={`/applications/${app.id}`} className="btn btn-outline btn-sm">
+                      View <ArrowRight size={16} />
+                    </Link>
+                  )}
                 </div>
               </div>
-              <div className="flex items-center gap-4">
-                <span className={getStatusBadge(app.status)}>
-                  {app.status.charAt(0).toUpperCase() + app.status.slice(1)}
-                </span>
-                <Link to={`/applications/${app.id}`} className="btn btn-outline btn-sm">
-                  View <ArrowRight size={16} />
-                </Link>
-              </div>
+              
+              {app.status === 'pending_payment' && (
+                <div className="mt-3 pt-3 border-t border-border flex items-center gap-2 text-yellow-700 text-sm">
+                  <AlertCircle size={16} />
+                  <span>Payment pending. Complete payment to submit your application.</span>
+                </div>
+              )}
             </div>
           ))}
         </div>

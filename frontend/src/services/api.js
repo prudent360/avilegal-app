@@ -62,8 +62,10 @@ export const kycAPI = {
 export const applicationAPI = {
   getAll: () => api.get('/customer/applications'),
   getOne: (id) => api.get(`/customer/applications/${id}`),
+  getById: (id) => api.get(`/customer/applications/${id}`),
   create: (data) => api.post('/customer/applications', data),
   update: (id, data) => api.put(`/customer/applications/${id}`, data),
+  delete: (id) => api.delete(`/customer/applications/${id}`),
 }
 
 // Dashboard APIs
@@ -90,7 +92,15 @@ export const adminAPI = {
   getApplication: (id) => api.get(`/admin/applications/${id}`),
   approveApplication: (id) => api.post(`/admin/applications/${id}/approve`),
   rejectApplication: (id, reason) => api.post(`/admin/applications/${id}/reject`, { reason }),
+  updateMilestone: (id, milestoneId) => api.post(`/admin/applications/${id}/update-milestone`, { milestone_id: milestoneId }),
+  completeApplication: (id) => api.post(`/admin/applications/${id}/complete`),
+  uploadDocumentForCustomer: (applicationId, formData) => api.post(`/admin/applications/${applicationId}/documents`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }),
   
+  // Payments
+  getPayments: () => api.get('/admin/payments'),
+
   // KYC
   getKYCDocuments: (params) => api.get('/admin/kyc', { params }),
   approveKYC: (id) => api.post(`/admin/kyc/${id}/approve`),

@@ -20,6 +20,8 @@ class Document extends Model
         'mime_type',
         'status',
         'rejection_reason',
+        'url',
+        'uploaded_by_admin',
     ];
 
     protected $appends = ['url'];

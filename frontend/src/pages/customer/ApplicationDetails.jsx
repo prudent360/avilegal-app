@@ -1,7 +1,7 @@
 import CustomerLayout from '../../components/layouts/CustomerLayout'
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { ArrowLeft, FileText, CheckCircle, Clock, Loader, Circle, Download } from 'lucide-react'
+import { ArrowLeft, FileText, CheckCircle, Clock, Loader, Circle, Download, Pencil } from 'lucide-react'
 import { applicationAPI } from '../../services/api'
 import { useToast } from '../../context/ToastContext'
 
@@ -208,9 +208,43 @@ export default function ApplicationDetails() {
           <div className="card">
             <h2 className="text-lg font-semibold text-text mb-4">Actions</h2>
             <div className="space-y-2">
-              <Link to="/documents" className="btn btn-outline w-full">Upload Documents</Link>
-              <button className="btn btn-outline w-full" disabled>Download Certificate</button>
+              {application.status === 'pending_payment' && (
+                <Link to={`/applications/${application.id}/edit`} className="btn btn-outline w-full">Edit Application</Link>
+              )}
             </div>
+          </div>
+
+          {/* Downloadable Documents from Admin */}
+          <div className="card">
+            <h2 className="text-lg font-semibold text-text mb-4">Your Documents</h2>
+            {application.documents && application.documents.filter(d => d.uploaded_by_admin).length > 0 ? (
+              <div className="space-y-2">
+                {application.documents.filter(d => d.uploaded_by_admin).map((doc) => (
+                  <a 
+                    key={doc.id}
+                    href={`http://localhost:8000${doc.url}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100 transition"
+                  >
+                    <Download size={18} className="text-green-600" />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-green-700 truncate">{doc.name || doc.type}</p>
+                      <p className="text-xs text-green-600">{doc.file_name}</p>
+                    </div>
+                  </a>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-4">
+                <Download size={24} className="mx-auto text-text-muted mb-2" />
+                <p className="text-sm text-text-muted">
+                  {application.status === 'completed' 
+                    ? 'Documents will appear here once uploaded by admin.'
+                    : 'Your certificates and documents will appear here once your application is processed.'}
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </div>

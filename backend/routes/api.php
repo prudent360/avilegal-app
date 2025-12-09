@@ -82,6 +82,39 @@ Route::middleware('auth:sanctum')->group(function () {
             return response()->json($application);
         });
 
+        // Update unsubmitted application
+        Route::put('/applications/{id}', function (Request $request, $id) {
+            $application = $request->user()->applications()->find($id);
+            if (!$application) {
+                return response()->json(['message' => 'Application not found'], 404);
+            }
+            if ($application->status !== 'pending_payment') {
+                return response()->json(['message' => 'Cannot edit submitted applications'], 400);
+            }
+            $request->validate([
+                'company_name' => 'sometimes|string|max:255',
+                'business_type' => 'sometimes|string|max:100',
+                'details' => 'sometimes|array',
+            ]);
+            $application->update($request->only(['company_name', 'business_type', 'details']));
+            return response()->json(['message' => 'Application updated', 'application' => $application]);
+        });
+
+        // Delete unsubmitted application
+        Route::delete('/applications/{id}', function (Request $request, $id) {
+            $application = $request->user()->applications()->find($id);
+            if (!$application) {
+                return response()->json(['message' => 'Application not found'], 404);
+            }
+            if ($application->status !== 'pending_payment') {
+                return response()->json(['message' => 'Cannot delete submitted applications'], 400);
+            }
+            // Delete related pending payments
+            $application->payments()->where('status', 'pending')->delete();
+            $application->delete();
+            return response()->json(['message' => 'Application deleted']);
+        });
+
         // Payments
         Route::get('/payments/config', [PaymentController::class, 'getConfig']);
         Route::post('/payments/initialize', [PaymentController::class, 'initialize']);
@@ -183,6 +216,35 @@ Route::middleware('auth:sanctum')->group(function () {
                 $application = \App\Models\Application::findOrFail($id);
                 $application->update(['status' => 'rejected', 'admin_notes' => $request->reason]);
                 return response()->json(['message' => 'Application rejected', 'application' => $application]);
+            });
+
+            // Admin upload documents for customer (CAC Certificate, TIN, Status Report, etc.)
+            Route::post('/applications/{id}/documents', function (Request $request, $id) {
+                $request->validate([
+                    'file' => 'required|file|max:10240',
+                    'type' => 'required|string|max:100',
+                    'name' => 'sometimes|string|max:255',
+                ]);
+
+                $application = \App\Models\Application::findOrFail($id);
+                $file = $request->file('file');
+                $path = $file->store('admin-documents', 'public');
+
+                $document = $application->documents()->create([
+                    'user_id' => $application->user_id,
+                    'name' => $request->name ?? $request->type,
+                    'type' => $request->type,
+                    'file_name' => $file->getClientOriginalName(),
+                    'file_path' => $path,
+                    'url' => '/storage/' . $path,
+                    'status' => 'approved',
+                    'uploaded_by_admin' => true,
+                ]);
+
+                return response()->json([
+                    'message' => 'Document uploaded successfully',
+                    'document' => $document
+                ]);
             });
         });
 

@@ -13,6 +13,7 @@ import CustomerDashboard from './pages/customer/Dashboard'
 import CustomerApplications from './pages/customer/Applications'
 import ApplicationDetails from './pages/customer/ApplicationDetails'
 import NewApplication from './pages/customer/NewApplication'
+import EditApplication from './pages/customer/EditApplication'
 import Documents from './pages/customer/Documents'
 import Profile from './pages/customer/Profile'
 import PaymentCallback from './pages/customer/PaymentCallback'
@@ -22,6 +23,7 @@ import PaymentHistory from './pages/customer/PaymentHistory'
 import AdminDashboard from './pages/admin/Dashboard'
 import AdminUsers from './pages/admin/Users'
 import AdminApplications from './pages/admin/Applications'
+import AdminApplicationDetails from './pages/admin/ApplicationDetails'
 import AdminDocuments from './pages/admin/DocumentReview'
 import AdminSettings from './pages/admin/Settings'
 import AdminRoles from './pages/admin/Roles'
@@ -90,6 +92,7 @@ function AppRoutes() {
       <Route path="/applications" element={<ProtectedRoute><CustomerApplications /></ProtectedRoute>} />
       <Route path="/applications/new" element={<ProtectedRoute><NewApplication /></ProtectedRoute>} />
       <Route path="/applications/:id" element={<ProtectedRoute><ApplicationDetails /></ProtectedRoute>} />
+      <Route path="/applications/:id/edit" element={<ProtectedRoute><EditApplication /></ProtectedRoute>} />
       <Route path="/documents" element={<ProtectedRoute><Documents /></ProtectedRoute>} />
       <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
       <Route path="/payments" element={<ProtectedRoute><PaymentHistory /></ProtectedRoute>} />
@@ -99,6 +102,7 @@ function AppRoutes() {
       <Route path="/admin" element={<ProtectedRoute adminOnly><AdminDashboard /></ProtectedRoute>} />
       <Route path="/admin/users" element={<ProtectedRoute adminOnly><AdminUsers /></ProtectedRoute>} />
       <Route path="/admin/applications" element={<ProtectedRoute adminOnly><AdminApplications /></ProtectedRoute>} />
+      <Route path="/admin/applications/:id" element={<ProtectedRoute adminOnly><AdminApplicationDetails /></ProtectedRoute>} />
       <Route path="/admin/documents" element={<ProtectedRoute adminOnly><AdminDocuments /></ProtectedRoute>} />
       <Route path="/admin/payments" element={<ProtectedRoute adminOnly><AdminPayments /></ProtectedRoute>} />
       <Route path="/admin/settings" element={<ProtectedRoute adminOnly><AdminSettings /></ProtectedRoute>} />

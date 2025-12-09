@@ -1,14 +1,48 @@
 import CustomerLayout from '../../components/layouts/CustomerLayout'
-import { FileText, Clock, CheckCircle, AlertCircle, ArrowRight } from 'lucide-react'
+import { FileText, Clock, CheckCircle, AlertCircle, ArrowRight, Loader } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { applicationAPI } from '../../services/api'
 
 export default function Dashboard() {
+  const [loading, setLoading] = useState(true)
+  const [applications, setApplications] = useState([])
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const res = await applicationAPI.getAll()
+        setApplications(res.data)
+      } catch (err) {
+        console.error('Failed to load applications')
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchData()
+  }, [])
+
+  const totalApps = applications.length
+  const pendingApps = applications.filter(a => ['pending', 'pending_payment', 'processing'].includes(a.status)).length
+  const completedApps = applications.filter(a => a.status === 'completed').length
+  const actionRequired = applications.filter(a => a.status === 'rejected' || a.status === 'pending_payment').length
+
   const stats = [
-    { label: 'Total Applications', value: '3', icon: FileText, color: 'bg-blue-100 text-blue-600' },
-    { label: 'Pending', value: '1', icon: Clock, color: 'bg-amber-100 text-amber-600' },
-    { label: 'Completed', value: '2', icon: CheckCircle, color: 'bg-primary-100 text-primary-600' },
-    { label: 'Action Required', value: '0', icon: AlertCircle, color: 'bg-red-100 text-red-600' },
+    { label: 'Total Applications', value: totalApps, icon: FileText, color: 'bg-blue-100 text-blue-600' },
+    { label: 'Pending', value: pendingApps, icon: Clock, color: 'bg-amber-100 text-amber-600' },
+    { label: 'Completed', value: completedApps, icon: CheckCircle, color: 'bg-primary-100 text-primary-600' },
+    { label: 'Action Required', value: actionRequired, icon: AlertCircle, color: 'bg-red-100 text-red-600' },
   ]
+
+  if (loading) {
+    return (
+      <CustomerLayout>
+        <div className="flex items-center justify-center py-20">
+          <Loader size={32} className="animate-spin text-primary-600" />
+        </div>
+      </CustomerLayout>
+    )
+  }
 
   return (
     <CustomerLayout>
@@ -42,7 +76,23 @@ export default function Dashboard() {
       {/* Recent Activity */}
       <div className="card">
         <h2 className="text-lg font-semibold text-text mb-4">Recent Applications</h2>
-        <p className="text-text-muted text-sm">No applications yet. Start your first registration!</p>
+        {applications.length === 0 ? (
+          <p className="text-text-muted text-sm">No applications yet. Start your first registration!</p>
+        ) : (
+          <div className="space-y-3">
+            {applications.slice(0, 5).map(app => (
+              <Link key={app.id} to={`/applications/${app.id}`} className="flex items-center justify-between p-3 bg-surface-hover rounded-lg hover:bg-border transition">
+                <div>
+                  <p className="font-medium text-text">{app.company_name}</p>
+                  <p className="text-sm text-text-muted">{app.service?.name}</p>
+                </div>
+                <span className={`badge ${app.status === 'completed' ? 'badge-success' : app.status === 'pending_payment' ? 'badge-warning' : 'badge-info'}`}>
+                  {app.status === 'pending_payment' ? 'Awaiting Payment' : app.status}
+                </span>
+              </Link>
+            ))}
+          </div>
+        )}
       </div>
     </CustomerLayout>
   )
