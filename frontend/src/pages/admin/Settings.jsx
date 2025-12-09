@@ -1,32 +1,22 @@
 import AdminLayout from '../../components/layouts/AdminLayout'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useToast } from '../../context/ToastContext'
-import { CreditCard, Building2, Loader, Eye, EyeOff, Mail } from 'lucide-react'
+import { Building2, Loader, Image, Upload, Trash2 } from 'lucide-react'
 import { adminAPI } from '../../services/api'
-import { useAuth } from '../../context/AuthContext'
 
 export default function Settings() {
   const toast = useToast()
-  const { isSuperAdmin } = useAuth()
+  const fileInputRef = useRef(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [showSecrets, setShowSecrets] = useState({})
+  const [uploadingLogo, setUploadingLogo] = useState(false)
   const [settings, setSettings] = useState({
     company_name: '',
     company_email: '',
     company_phone: '',
+    company_address: '',
     frontend_url: '',
-    paystack_public_key: '',
-    paystack_secret_key: '',
-    flutterwave_public_key: '',
-    flutterwave_secret_key: '',
-    smtp_host: '',
-    smtp_port: '',
-    smtp_username: '',
-    smtp_password: '',
-    smtp_encryption: 'tls',
-    smtp_from_address: '',
-    smtp_from_name: '',
+    company_logo: '',
   })
 
   useEffect(() => {
@@ -60,8 +50,44 @@ export default function Settings() {
     }
   }
 
-  const toggleShowSecret = (key) => {
-    setShowSecrets(prev => ({ ...prev, [key]: !prev[key] }))
+  const handleLogoUpload = async (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please upload an image file')
+      return
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('Image must be less than 2MB')
+      return
+    }
+
+    setUploadingLogo(true)
+    try {
+      const formData = new FormData()
+      formData.append('logo', file)
+      const res = await adminAPI.uploadLogo(formData)
+      setSettings(prev => ({ ...prev, company_logo: res.data.logo_url }))
+      toast.success('Logo uploaded successfully')
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to upload logo')
+    } finally {
+      setUploadingLogo(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
+
+  const handleDeleteLogo = async () => {
+    if (!confirm('Remove company logo?')) return
+    try {
+      await adminAPI.deleteLogo()
+      setSettings(prev => ({ ...prev, company_logo: '' }))
+      toast.success('Logo removed')
+    } catch (err) {
+      toast.error('Failed to remove logo')
+    }
   }
 
   if (loading) {
@@ -77,11 +103,67 @@ export default function Settings() {
   return (
     <AdminLayout>
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-text mb-1">Settings</h1>
-        <p className="text-text-muted">Configure system settings, payment gateways, and email.</p>
+        <h1 className="text-2xl font-bold text-text mb-1">General Settings</h1>
+        <p className="text-text-muted">Configure company information and branding.</p>
       </div>
 
       <form onSubmit={handleSave} className="max-w-2xl space-y-6">
+        {/* Company Logo */}
+        <div className="card">
+          <div className="flex items-center gap-3 mb-4">
+            <Image size={20} className="text-primary-600" />
+            <h2 className="text-lg font-semibold text-text">Company Logo</h2>
+          </div>
+          <div className="flex items-start gap-6">
+            <div className="w-32 h-32 bg-surface-hover border-2 border-dashed border-border rounded-lg flex items-center justify-center overflow-hidden">
+              {settings.company_logo ? (
+                <img 
+                  src={`http://localhost:8000${settings.company_logo}`} 
+                  alt="Company Logo" 
+                  className="w-full h-full object-contain"
+                />
+              ) : (
+                <div className="text-center text-text-muted">
+                  <Image size={32} className="mx-auto mb-1 opacity-50" />
+                  <span className="text-xs">No logo</span>
+                </div>
+              )}
+            </div>
+            <div className="flex-1">
+              <p className="text-sm text-text-muted mb-3">
+                Upload your company logo. Recommended size: 200x200px. Max file size: 2MB.
+              </p>
+              <div className="flex gap-2">
+                <input 
+                  type="file" 
+                  ref={fileInputRef}
+                  className="hidden" 
+                  accept="image/*"
+                  onChange={handleLogoUpload}
+                />
+                <button 
+                  type="button" 
+                  onClick={() => fileInputRef.current?.click()}
+                  className="btn btn-outline btn-sm"
+                  disabled={uploadingLogo}
+                >
+                  {uploadingLogo ? <Loader size={16} className="animate-spin" /> : <Upload size={16} />}
+                  {uploadingLogo ? 'Uploading...' : 'Upload Logo'}
+                </button>
+                {settings.company_logo && (
+                  <button 
+                    type="button" 
+                    onClick={handleDeleteLogo}
+                    className="btn btn-outline btn-sm text-red-600 hover:bg-red-50"
+                  >
+                    <Trash2 size={16} /> Remove
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Company Information */}
         <div className="card">
           <div className="flex items-center gap-3 mb-4">
@@ -103,131 +185,11 @@ export default function Settings() {
             </div>
             <div className="form-group">
               <label className="form-label">Frontend URL</label>
-              <input type="url" className="form-input" placeholder="http://localhost:3003" value={settings.frontend_url} onChange={(e) => setSettings({ ...settings, frontend_url: e.target.value })} />
-            </div>
-          </div>
-        </div>
-
-        {/* Email SMTP */}
-        <div className="card">
-          <div className="flex items-center gap-3 mb-4">
-            <Mail size={20} className="text-blue-600" />
-            <h2 className="text-lg font-semibold text-text">Email (SMTP) Configuration</h2>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="form-group">
-              <label className="form-label">SMTP Host</label>
-              <input type="text" className="form-input font-mono text-sm" placeholder="smtp.gmail.com" value={settings.smtp_host} onChange={(e) => setSettings({ ...settings, smtp_host: e.target.value })} />
-            </div>
-            <div className="form-group">
-              <label className="form-label">SMTP Port</label>
-              <input type="text" className="form-input font-mono text-sm" placeholder="587" value={settings.smtp_port} onChange={(e) => setSettings({ ...settings, smtp_port: e.target.value })} />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Username</label>
-              <input type="text" className="form-input font-mono text-sm" placeholder="your@email.com" value={settings.smtp_username} onChange={(e) => setSettings({ ...settings, smtp_username: e.target.value })} />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Password</label>
-              <div className="relative">
-                <input type={showSecrets.smtp ? 'text' : 'password'} className="form-input font-mono text-sm pr-10" placeholder="App password" value={settings.smtp_password} onChange={(e) => setSettings({ ...settings, smtp_password: e.target.value })} />
-                <button type="button" onClick={() => toggleShowSecret('smtp')} className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text">
-                  {showSecrets.smtp ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
-              </div>
-            </div>
-            <div className="form-group">
-              <label className="form-label">Encryption</label>
-              <select className="form-input form-select" value={settings.smtp_encryption} onChange={(e) => setSettings({ ...settings, smtp_encryption: e.target.value })}>
-                <option value="tls">TLS</option>
-                <option value="ssl">SSL</option>
-                <option value="">None</option>
-              </select>
-            </div>
-            <div className="form-group">
-              <label className="form-label">From Address</label>
-              <input type="email" className="form-input" placeholder="noreply@avilegal.com" value={settings.smtp_from_address} onChange={(e) => setSettings({ ...settings, smtp_from_address: e.target.value })} />
+              <input type="url" className="form-input" placeholder="http://localhost:5173" value={settings.frontend_url} onChange={(e) => setSettings({ ...settings, frontend_url: e.target.value })} />
             </div>
             <div className="form-group sm:col-span-2">
-              <label className="form-label">From Name</label>
-              <input type="text" className="form-input" placeholder="AviLegal" value={settings.smtp_from_name} onChange={(e) => setSettings({ ...settings, smtp_from_name: e.target.value })} />
-            </div>
-            <div className="form-group sm:col-span-2">
-              <label className="form-label">Test Email</label>
-              <div className="flex gap-2">
-                <input 
-                  type="email" 
-                  className="form-input flex-1" 
-                  placeholder="Enter email to send test"
-                  id="test-email-input"
-                />
-                <button 
-                  type="button" 
-                  className="btn btn-outline"
-                  onClick={async () => {
-                    const email = document.getElementById('test-email-input').value
-                    if (!email) {
-                      toast.error('Enter an email address')
-                      return
-                    }
-                    try {
-                      const res = await adminAPI.testEmail(email)
-                      toast.success(res.data.message)
-                    } catch (err) {
-                      toast.error(err.response?.data?.message || 'Failed to send test email')
-                    }
-                  }}
-                >
-                  Send Test
-                </button>
-              </div>
-              <p className="text-xs text-text-muted mt-1">Save settings first, then send a test email to verify.</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Paystack */}
-        <div className="card">
-          <div className="flex items-center gap-3 mb-4">
-            <CreditCard size={20} className="text-green-600" />
-            <h2 className="text-lg font-semibold text-text">Paystack Configuration</h2>
-          </div>
-          <div className="grid gap-4">
-            <div className="form-group">
-              <label className="form-label">Public Key</label>
-              <input type="text" className="form-input font-mono text-sm" placeholder="pk_test_xxx or pk_live_xxx" value={settings.paystack_public_key} onChange={(e) => setSettings({ ...settings, paystack_public_key: e.target.value })} />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Secret Key</label>
-              <div className="relative">
-                <input type={showSecrets.paystack ? 'text' : 'password'} className="form-input font-mono text-sm pr-10" placeholder="sk_test_xxx or sk_live_xxx" value={settings.paystack_secret_key} onChange={(e) => setSettings({ ...settings, paystack_secret_key: e.target.value })} />
-                <button type="button" onClick={() => toggleShowSecret('paystack')} className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text">
-                  {showSecrets.paystack ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Flutterwave */}
-        <div className="card">
-          <div className="flex items-center gap-3 mb-4">
-            <CreditCard size={20} className="text-orange-500" />
-            <h2 className="text-lg font-semibold text-text">Flutterwave Configuration</h2>
-          </div>
-          <div className="grid gap-4">
-            <div className="form-group">
-              <label className="form-label">Public Key</label>
-              <input type="text" className="form-input font-mono text-sm" placeholder="FLWPUBK_TEST-xxx or FLWPUBK-xxx" value={settings.flutterwave_public_key} onChange={(e) => setSettings({ ...settings, flutterwave_public_key: e.target.value })} />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Secret Key</label>
-              <div className="relative">
-                <input type={showSecrets.flutterwave ? 'text' : 'password'} className="form-input font-mono text-sm pr-10" placeholder="FLWSECK_TEST-xxx or FLWSECK-xxx" value={settings.flutterwave_secret_key} onChange={(e) => setSettings({ ...settings, flutterwave_secret_key: e.target.value })} />
-                <button type="button" onClick={() => toggleShowSecret('flutterwave')} className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text">
-                  {showSecrets.flutterwave ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
-              </div>
+              <label className="form-label">Company Address</label>
+              <textarea className="form-input" rows={2} value={settings.company_address || ''} onChange={(e) => setSettings({ ...settings, company_address: e.target.value })} placeholder="Enter company address" />
             </div>
           </div>
         </div>

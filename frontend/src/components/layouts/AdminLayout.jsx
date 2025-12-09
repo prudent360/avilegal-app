@@ -8,7 +8,12 @@ export default function AdminLayout({ children }) {
   const navigate = useNavigate()
   const location = useLocation()
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [settingsOpen, setSettingsOpen] = useState(location.pathname.includes('/admin/settings') || location.pathname.includes('/admin/email-templates'))
+  const [settingsOpen, setSettingsOpen] = useState(
+    location.pathname.includes('/admin/settings') || 
+    location.pathname.includes('/admin/email-templates') ||
+    location.pathname.includes('/admin/payment-config') ||
+    location.pathname.includes('/admin/smtp-config')
+  )
 
   const handleLogout = async () => { await logout(); navigate('/login') }
 
@@ -23,10 +28,15 @@ export default function AdminLayout({ children }) {
 
   const settingsSubLinks = [
     { to: '/admin/settings', label: 'General Settings' },
+    { to: '/admin/payment-config', label: 'Payment Gateway' },
+    { to: '/admin/smtp-config', label: 'SMTP / Email' },
     { to: '/admin/email-templates', label: 'Email Templates' },
   ]
 
-  const isSettingsActive = location.pathname.includes('/admin/settings') || location.pathname.includes('/admin/email-templates')
+  const isSettingsActive = location.pathname.includes('/admin/settings') || 
+    location.pathname.includes('/admin/email-templates') || 
+    location.pathname.includes('/admin/payment-config') || 
+    location.pathname.includes('/admin/smtp-config')
 
   return (
     <div className="flex min-h-screen bg-background">

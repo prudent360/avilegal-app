@@ -291,6 +291,36 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/settings', [\App\Http\Controllers\Api\SettingsController::class, 'index']);
             Route::put('/settings', [\App\Http\Controllers\Api\SettingsController::class, 'update']);
             Route::post('/settings/test-email', [\App\Http\Controllers\Api\SettingsController::class, 'testEmail']);
+            
+            // Logo upload
+            Route::post('/settings/logo', function (Request $request) {
+                $request->validate(['logo' => 'required|image|max:2048']);
+                
+                $file = $request->file('logo');
+                $path = $file->store('logos', 'public');
+                
+                // Save logo path to settings
+                $setting = \App\Models\Setting::updateOrCreate(
+                    ['key' => 'company_logo'],
+                    ['value' => '/storage/' . $path]
+                );
+                
+                return response()->json([
+                    'message' => 'Logo uploaded successfully',
+                    'logo_url' => '/storage/' . $path
+                ]);
+            });
+            
+            Route::delete('/settings/logo', function () {
+                $setting = \App\Models\Setting::where('key', 'company_logo')->first();
+                if ($setting && $setting->value) {
+                    // Delete old file
+                    $path = str_replace('/storage/', '', $setting->value);
+                    \Illuminate\Support\Facades\Storage::disk('public')->delete($path);
+                    $setting->delete();
+                }
+                return response()->json(['message' => 'Logo removed']);
+            });
 
             // Email Templates
             Route::get('/email-templates', [\App\Http\Controllers\Api\EmailTemplateController::class, 'index']);

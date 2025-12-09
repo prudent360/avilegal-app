@@ -109,6 +109,10 @@ export const adminAPI = {
   // Settings
   getSettings: () => api.get('/admin/settings'),
   updateSettings: (data) => api.put('/admin/settings', data),
+  uploadLogo: (formData) => api.post('/admin/settings/logo', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }),
+  deleteLogo: () => api.delete('/admin/settings/logo'),
   testEmail: (email) => api.post('/admin/settings/test-email', { email }),
 
   // Email Templates
