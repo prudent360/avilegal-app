@@ -124,7 +124,7 @@ export const adminAPI = {
   uploadLogo: (formData) => api.post('/admin/settings/logo', formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   }),
-  deleteLogo: () => api.delete('/admin/settings/logo'),
+  deleteLogo: (type) => api.delete(`/admin/settings/logo/${type}`),
   testEmail: (email) => api.post('/admin/settings/test-email', { email }),
 
   // Email Templates
@@ -176,3 +176,8 @@ export const documentAPI = {
 }
 
 export default api
+
+// Public APIs (no auth required)
+export const publicAPI = {
+  getLogos: () => api.get('/logos'),
+}

@@ -1,12 +1,30 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { Building2, LayoutDashboard, FileText, Upload, User, LogOut, Menu, X, CreditCard } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { publicAPI } from '../../services/api'
+
+const API_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:8000'
 
 export default function CustomerLayout({ children }) {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [dashboardLogo, setDashboardLogo] = useState(null)
+
+  useEffect(() => {
+    const fetchLogo = async () => {
+      try {
+        const res = await publicAPI.getLogos()
+        if (res.data.dashboard_logo) {
+          setDashboardLogo(res.data.dashboard_logo)
+        }
+      } catch (err) {
+        console.error('Failed to fetch logo:', err)
+      }
+    }
+    fetchLogo()
+  }, [])
 
   const handleLogout = async () => { await logout(); navigate('/login') }
 
@@ -32,10 +50,16 @@ export default function CustomerLayout({ children }) {
       <aside className={`fixed top-0 left-0 h-full w-56 bg-surface border-r border-border flex flex-col z-40 transition-transform duration-200 lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         {/* Brand */}
         <div className="flex items-center gap-2.5 px-5 py-5 border-b border-border">
-          <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
-            <Building2 size={18} className="text-white" />
-          </div>
-          <span className="text-lg font-semibold text-text">AviLegal</span>
+          {dashboardLogo ? (
+            <img src={`${API_URL}${dashboardLogo}`} alt="Logo" className="h-8 w-auto object-contain" />
+          ) : (
+            <>
+              <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
+                <Building2 size={18} className="text-white" />
+              </div>
+              <span className="text-lg font-semibold text-text">AviLegal</span>
+            </>
+          )}
         </div>
 
         {/* Navigation */}

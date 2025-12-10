@@ -1,7 +1,10 @@
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { Building2, LayoutDashboard, Users, FileText, Upload, Settings, LogOut, Menu, X, Shield, CreditCard, ChevronDown, Mail } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { publicAPI } from '../../services/api'
+
+const API_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:8000'
 
 export default function AdminLayout({ children }) {
   const { user, logout } = useAuth()
@@ -13,6 +16,21 @@ export default function AdminLayout({ children }) {
     location.pathname.includes('/admin/payment-config') ||
     location.pathname.includes('/admin/email-config')
   )
+  const [dashboardLogo, setDashboardLogo] = useState(null)
+
+  useEffect(() => {
+    const fetchLogo = async () => {
+      try {
+        const res = await publicAPI.getLogos()
+        if (res.data.dashboard_logo) {
+          setDashboardLogo(res.data.dashboard_logo)
+        }
+      } catch (err) {
+        console.error('Failed to fetch logo:', err)
+      }
+    }
+    fetchLogo()
+  }, [])
 
   const handleLogout = async () => { await logout(); navigate('/login') }
 
@@ -36,6 +54,13 @@ export default function AdminLayout({ children }) {
     location.pathname.includes('/admin/payment-config') || 
     location.pathname.includes('/admin/email-config')
 
+  // Icon mapping for settings submenu
+  const getSettingsIcon = (path) => {
+    if (path.includes('payment-config')) return CreditCard
+    if (path.includes('email-config')) return Mail
+    return Settings
+  }
+
   return (
     <div className="flex min-h-screen bg-background">
       {/* Mobile Menu Button */}
@@ -50,13 +75,16 @@ export default function AdminLayout({ children }) {
       <aside className={`fixed top-0 left-0 h-full w-56 bg-surface border-r border-border flex flex-col z-40 transition-transform duration-200 lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         {/* Brand */}
         <div className="flex items-center gap-2.5 px-5 py-5 border-b border-border">
-          <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
-            <Building2 size={18} className="text-white" />
-          </div>
-          <div>
-            <span className="text-lg font-semibold text-text">AviLegal</span>
-            <span className="block text-xs text-primary-600">Admin</span>
-          </div>
+          {dashboardLogo ? (
+            <img src={`${API_URL}${dashboardLogo}`} alt="Logo" className="h-8 w-auto object-contain" />
+          ) : (
+            <>
+              <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
+                <Building2 size={18} className="text-white" />
+              </div>
+              <span className="text-lg font-semibold text-text">AviLegal</span>
+            </>
+          )}
         </div>
 
         {/* Navigation */}
@@ -69,33 +97,30 @@ export default function AdminLayout({ children }) {
             </NavLink>
           ))}
 
-          {/* Settings with submenu */}
+          {/* Settings Dropdown */}
           <div>
             <button
               onClick={() => setSettingsOpen(!settingsOpen)}
               className={`nav-link w-full justify-between ${isSettingsActive ? 'active' : ''}`}
             >
-              <span className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
                 <Settings size={18} />
                 <span>Settings</span>
-              </span>
+              </div>
               <ChevronDown size={16} className={`transition-transform ${settingsOpen ? 'rotate-180' : ''}`} />
             </button>
             {settingsOpen && (
-              <div className="ml-6 mt-1 space-y-1 border-l border-border pl-3">
-                {settingsSubLinks.map(({ to, label }) => (
-                  <NavLink
-                    key={to}
-                    to={to}
-                    onClick={() => setSidebarOpen(false)}
-                    className={({ isActive }) => `nav-link text-sm py-2 ${isActive ? 'active' : ''}`}
-                  >
-                    {label === 'General Settings' && <Settings size={14} />}
-                    {label === 'Payment Gateway' && <CreditCard size={14} />}
-                    {label === 'Email & Templates' && <Mail size={14} />}
-                    <span>{label}</span>
-                  </NavLink>
-                ))}
+              <div className="ml-4 mt-1 space-y-1">
+                {settingsSubLinks.map(({ to, label }) => {
+                  const Icon = getSettingsIcon(to)
+                  return (
+                    <NavLink key={to} to={to} onClick={() => setSidebarOpen(false)}
+                      className={({ isActive }) => `nav-link text-sm ${isActive ? 'active' : ''}`}>
+                      <Icon size={16} />
+                      <span>{label}</span>
+                    </NavLink>
+                  )
+                })}
               </div>
             )}
           </div>
@@ -109,7 +134,7 @@ export default function AdminLayout({ children }) {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-text truncate">{user?.name}</p>
-              <p className="text-xs text-primary-600">Administrator</p>
+              <p className="text-xs text-text-muted truncate">{user?.email}</p>
             </div>
           </div>
           <button onClick={handleLogout} className="nav-link w-full text-red-600 hover:text-red-700 hover:bg-red-50">

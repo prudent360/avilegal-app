@@ -55,6 +55,17 @@ Route::get('/services/{slug}', function ($slug) {
     return response()->json($service);
 });
 
+// Public logos endpoint
+Route::get('/logos', function () {
+    $logos = \App\Models\Setting::whereIn('key', ['header_logo', 'footer_logo', 'dashboard_logo'])
+        ->pluck('value', 'key');
+    return response()->json([
+        'header_logo' => $logos['header_logo'] ?? null,
+        'footer_logo' => $logos['footer_logo'] ?? null,
+        'dashboard_logo' => $logos['dashboard_logo'] ?? null,
+    ]);
+});
+
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
     // Auth
@@ -391,32 +402,51 @@ Route::middleware('auth:sanctum')->group(function () {
             
             // Logo upload
             Route::post('/settings/logo', function (Request $request) {
-                $request->validate(['logo' => 'required|image|max:2048']);
+                $request->validate([
+                    'logo' => 'required|image|max:2048',
+                    'type' => 'required|in:header,footer,dashboard'
+                ]);
+                
+                $type = $request->type;
+                $key = $type . '_logo';
+                
+                // Delete old logo if exists
+                $oldSetting = \App\Models\Setting::where('key', $key)->first();
+                if ($oldSetting && $oldSetting->value) {
+                    $oldPath = str_replace('/storage/', '', $oldSetting->value);
+                    \Illuminate\Support\Facades\Storage::disk('public')->delete($oldPath);
+                }
                 
                 $file = $request->file('logo');
                 $path = $file->store('logos', 'public');
                 
                 // Save logo path to settings
                 $setting = \App\Models\Setting::updateOrCreate(
-                    ['key' => 'company_logo'],
+                    ['key' => $key],
                     ['value' => '/storage/' . $path]
                 );
                 
                 return response()->json([
-                    'message' => 'Logo uploaded successfully',
-                    'logo_url' => '/storage/' . $path
+                    'message' => ucfirst($type) . ' logo uploaded successfully',
+                    'logo_url' => '/storage/' . $path,
+                    'type' => $type
                 ]);
             });
             
-            Route::delete('/settings/logo', function () {
-                $setting = \App\Models\Setting::where('key', 'company_logo')->first();
+            Route::delete('/settings/logo/{type}', function ($type) {
+                if (!in_array($type, ['header', 'footer', 'dashboard'])) {
+                    return response()->json(['message' => 'Invalid logo type'], 422);
+                }
+                
+                $key = $type . '_logo';
+                $setting = \App\Models\Setting::where('key', $key)->first();
                 if ($setting && $setting->value) {
                     // Delete old file
                     $path = str_replace('/storage/', '', $setting->value);
                     \Illuminate\Support\Facades\Storage::disk('public')->delete($path);
                     $setting->delete();
                 }
-                return response()->json(['message' => 'Logo removed']);
+                return response()->json(['message' => ucfirst($type) . ' logo removed']);
             });
 
             // Email Templates

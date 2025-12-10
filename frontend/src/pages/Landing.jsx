@@ -1,23 +1,23 @@
 import { Link } from 'react-router-dom'
 import { Building2, Shield, Clock, CheckCircle, ArrowRight, Sparkles, FileText, Users, Award } from 'lucide-react'
 import { useState, useEffect } from 'react'
-import api from '../services/api'
+import { publicAPI } from '../services/api'
+
+const API_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:8000'
 
 export default function Landing() {
-  const [logoUrl, setLogoUrl] = useState(null)
+  const [logos, setLogos] = useState({ header_logo: null, footer_logo: null })
 
   useEffect(() => {
-    const fetchLogo = async () => {
+    const fetchLogos = async () => {
       try {
-        const res = await api.get('/logo')
-        if (res.data.logo_url) {
-          setLogoUrl(`http://localhost:8000${res.data.logo_url}`)
-        }
+        const res = await publicAPI.getLogos()
+        setLogos(res.data)
       } catch (err) {
-        console.error('Failed to fetch logo:', err)
+        console.error('Failed to fetch logos:', err)
       }
     }
-    fetchLogo()
+    fetchLogos()
   }, [])
 
   const services = [
@@ -27,20 +27,28 @@ export default function Landing() {
     { name: 'SCUML Registration', price: '₦45,000', duration: '5 days' },
   ]
 
+  const LogoDisplay = ({ logo, size = 'h-8', showText = true }) => (
+    <div className="flex items-center gap-2">
+      {logo ? (
+        <img src={`${API_URL}${logo}`} alt="Logo" className={`${size} w-auto object-contain`} />
+      ) : (
+        <>
+          <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
+            <Building2 size={18} className="text-white" />
+          </div>
+          {showText && <span className="text-lg font-semibold text-text">AviLegal</span>}
+        </>
+      )}
+    </div>
+  )
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-surface/90 backdrop-blur-sm border-b border-border">
         <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2">
-            {logoUrl ? (
-              <img src={logoUrl} alt="Logo" className="h-8 w-auto object-contain" />
-            ) : (
-              <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
-                <Building2 size={18} className="text-white" />
-              </div>
-            )}
-            <span className="text-lg font-semibold text-text">AviLegal</span>
+          <Link to="/">
+            <LogoDisplay logo={logos.header_logo} />
           </Link>
           <nav className="hidden md:flex items-center gap-6">
             <a href="#services" className="text-sm text-text-muted hover:text-text">Services</a>
@@ -174,15 +182,8 @@ export default function Landing() {
         <div className="max-w-3xl mx-auto">
           <div className="flex flex-col md:flex-row items-start justify-between gap-8 mb-8">
             <div>
-              <Link to="/" className="flex items-center gap-2 mb-3">
-                {logoUrl ? (
-                  <img src={logoUrl} alt="Logo" className="h-8 w-auto object-contain" />
-                ) : (
-                  <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
-                    <Building2 size={18} className="text-white" />
-                  </div>
-                )}
-                <span className="text-lg font-semibold text-text">AviLegal</span>
+              <Link to="/" className="mb-3 block">
+                <LogoDisplay logo={logos.footer_logo} />
               </Link>
               <p className="text-sm text-text-muted max-w-xs">Professional business registration and legal services in Nigeria.</p>
             </div>
