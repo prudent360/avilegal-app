@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../context/ToastContext'
 import { authAPI } from '../../services/api'
 import { User, Lock, Loader, Eye, EyeOff } from 'lucide-react'
+import PasswordStrength, { isPasswordStrong } from '../../components/PasswordStrength'
 
 export default function Profile() {
   const { user, setUser } = useAuth()
@@ -45,8 +46,8 @@ export default function Profile() {
       toast.error('New passwords do not match')
       return
     }
-    if (passwordData.new_password.length < 8) {
-      toast.error('Password must be at least 8 characters')
+    if (!isPasswordStrong(passwordData.new_password)) {
+      toast.error('Please use a stronger password')
       return
     }
     
@@ -150,6 +151,7 @@ export default function Profile() {
                   {showPasswords.new ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
+              <PasswordStrength password={passwordData.new_password} />
             </div>
             <div className="form-group">
               <label className="form-label">Confirm New Password</label>
@@ -166,7 +168,7 @@ export default function Profile() {
                 </button>
               </div>
             </div>
-            <button type="submit" className="btn btn-outline" disabled={changingPassword}>
+            <button type="submit" className="btn btn-outline" disabled={changingPassword || !isPasswordStrong(passwordData.new_password)}>
               {changingPassword ? <><Loader size={16} className="animate-spin" /> Updating...</> : 'Update Password'}
             </button>
           </form>

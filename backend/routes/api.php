@@ -329,7 +329,7 @@ Route::middleware('auth:sanctum')->group(function () {
         // Payments
         Route::middleware('permission:view_payments')->group(function () {
             Route::get('/payments', function () {
-                return response()->json(\App\Models\Payment::with(['user', 'application'])->latest()->get());
+                return response()->json(\App\Models\Payment::with(['user', 'application.service'])->latest()->get());
             });
         });
 

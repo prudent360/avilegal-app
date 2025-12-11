@@ -137,6 +137,11 @@ export default function AdminLayout({ children }) {
               <p className="text-xs text-text-muted truncate">{user?.email}</p>
             </div>
           </div>
+          <NavLink to="/admin/profile" onClick={() => setSidebarOpen(false)}
+            className={({ isActive }) => `nav-link mb-1 ${isActive ? 'active' : ''}`}>
+            <Users size={18} />
+            <span>My Profile</span>
+          </NavLink>
           <button onClick={handleLogout} className="nav-link w-full text-red-600 hover:text-red-700 hover:bg-red-50">
             <LogOut size={18} />
             <span>Logout</span>

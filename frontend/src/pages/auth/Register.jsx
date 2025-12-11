@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../context/ToastContext'
 import { Mail, Lock, User, Phone, Eye, EyeOff, Building2, ArrowRight } from 'lucide-react'
+import PasswordStrength, { isPasswordStrong } from '../../components/PasswordStrength'
 
 export default function Register() {
   const [formData, setFormData] = useState({ name: '', email: '', phone: '', password: '', password_confirmation: '' })
@@ -17,8 +18,8 @@ export default function Register() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (!formData.name || !formData.email || !formData.phone || !formData.password) { toast.error('Please fill in all fields'); return }
+    if (!isPasswordStrong(formData.password)) { toast.error('Please use a stronger password'); return }
     if (formData.password !== formData.password_confirmation) { toast.error('Passwords do not match'); return }
-    if (formData.password.length < 8) { toast.error('Password must be at least 8 characters'); return }
     setLoading(true)
     try {
       await register(formData)
@@ -61,7 +62,7 @@ export default function Register() {
                 <input type={showPassword ? 'text' : 'password'} name="password" className="form-input pr-10" placeholder="Create a password" value={formData.password} onChange={handleChange} />
                 <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text" onClick={() => setShowPassword(!showPassword)}>{showPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button>
               </div>
-              <p className="text-xs text-text-muted mt-1">Min 8 characters</p>
+              <PasswordStrength password={formData.password} />
             </div>
             <div className="form-group"><label className="form-label">Confirm Password</label><input type={showPassword ? 'text' : 'password'} name="password_confirmation" className="form-input" placeholder="Confirm password" value={formData.password_confirmation} onChange={handleChange} /></div>
 
@@ -70,7 +71,7 @@ export default function Register() {
               <span className="text-xs text-text-muted">I agree to the <a href="#" className="text-primary-600">Terms</a> and <a href="#" className="text-primary-600">Privacy Policy</a></span>
             </label>
 
-            <button type="submit" className="btn btn-primary w-full" disabled={loading}>{loading ? 'Creating account...' : 'Create Account'} <ArrowRight size={16} /></button>
+            <button type="submit" className="btn btn-primary w-full" disabled={loading || !isPasswordStrong(formData.password)}>{loading ? 'Creating account...' : 'Create Account'} <ArrowRight size={16} /></button>
           </form>
 
           <p className="text-center text-text-muted text-sm mt-6">Already have an account? <Link to="/login" className="text-primary-600 hover:underline font-medium">Sign in</Link></p>
