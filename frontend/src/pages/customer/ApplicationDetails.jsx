@@ -159,8 +159,7 @@ export default function ApplicationDetails() {
                     <div className="flex items-center gap-3">
                       <FileText size={20} className="text-primary-600" />
                       <div>
-                        <p className="font-medium text-text">{doc.name}</p>
-                        <p className="text-xs text-text-muted">{doc.file_name}</p>
+                        <p className="font-medium text-text">{doc.name || doc.type}</p>
                       </div>
                     </div>
                     <span className={`badge ${doc.status === 'approved' ? 'badge-success' : doc.status === 'rejected' ? 'badge-danger' : 'badge-warning'}`}>
@@ -223,10 +222,7 @@ export default function ApplicationDetails() {
                     className="flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100 transition"
                   >
                     <Download size={18} className="text-green-600" />
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-green-700 truncate">{doc.name || doc.type}</p>
-                      <p className="text-xs text-green-600">{doc.file_name}</p>
-                    </div>
+                    <p className="font-medium text-green-700 truncate flex-1 min-w-0">{doc.name || doc.type}</p>
                   </a>
                 ))}
               </div>
